@@ -465,3 +465,100 @@ async def query_audit_logs(
         from datetime import datetime
         since_dt = datetime.fromisoformat(since)
     return _query(event=evt, since=since_dt, limit=limit)
+
+
+_MODEL_COSTS_PER_1K = {
+    "openai:gpt-4o": 0.015,
+    "openai:gpt-4o-mini": 0.0006,
+    "openai:gpt-4-turbo": 0.01,
+    "openai:gpt-3.5-turbo": 0.0015,
+    "anthropic:claude-3-opus": 0.015,
+    "anthropic:claude-3-sonnet": 0.003,
+    "anthropic:claude-3-haiku": 0.00025,
+    "ollama:llama-3": 0.0,
+    "ollama:mixtral-8x7b": 0.0,
+    "local:default": 0.0,
+}
+
+
+class APIMetrics:
+    _requests: list[dict[str, Any]] = []
+    _lock: asyncio.Lock = asyncio.Lock()
+
+    def record(
+        self,
+        method: str,
+        path: str,
+        latency_ms: float,
+        tokens_used: int | None = None,
+        model: str | None = None,
+        status: int = 200,
+    ) -> None:
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "method": method,
+            "path": path,
+            "latency_ms": round(latency_ms, 1),
+            "tokens_used": tokens_used,
+            "model": model,
+            "status": status,
+        }
+        self._requests.append(entry)
+        if len(self._requests) > 10_000:
+            self._requests = self._requests[-5000:]
+
+    async def get_stats(
+        self,
+        window_minutes: int = 60,
+    ) -> dict[str, Any]:
+        cutoff = datetime.now(timezone.utc).timestamp() - window_minutes * 60
+        async with self._lock:
+            recent = [
+                r for r in self._requests
+                if datetime.fromisoformat(r["timestamp"]).timestamp() > cutoff
+            ]
+        total = len(recent)
+        latencies = [r["latency_ms"] for r in recent]
+        sorted_lat = sorted(latencies) if latencies else [0]
+        p50 = sorted_lat[int(len(sorted_lat) * 0.50)] if sorted_lat else 0
+        p95 = sorted_lat[int(len(sorted_lat) * 0.95)] if sorted_lat else 0
+        p99 = sorted_lat[int(len(sorted_lat) * 0.99)] if sorted_lat else 0
+        total_tokens = sum(r["tokens_used"] or 0 for r in recent)
+        key = (recent[0]["model"] or "unknown") if recent else "unknown"
+        cost = total_tokens / 1000 * _MODEL_COSTS_PER_1K.get(key, 0.0)
+        return {
+            "requests": total,
+            "latency_ms": {"p50": round(p50, 1), "p95": round(p95, 1), "p99": round(p99, 1)},
+            "tokens_used": total_tokens,
+            "estimated_cost_usd": round(cost, 4),
+            "window_minutes": window_minutes,
+        }
+
+
+_metrics = APIMetrics()
+
+
+@app.middleware("http")  # type: ignore[arg-type]
+async def record_metrics(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    latency_ms = (time.perf_counter() - start) * 1000
+    _metrics.record(
+        method=request.method,
+        path=request.url.path,
+        latency_ms=latency_ms,
+        status=response.status_code if hasattr(response, "status_code") else 200,
+    )
+    return response
+
+
+@app.get("/api/metrics", response_model=dict[str, Any])
+async def get_metrics(window_minutes: int = 60):
+    return await _metrics.get_stats(window_minutes=window_minutes)
+
+
+@app.post("/api/metrics/reset")
+async def reset_metrics():
+    async with _metrics._lock:
+        _metrics._requests.clear()
+    return {"reset": "metrics cleared"}

@@ -235,6 +235,15 @@ class Aigis:
         redact: bool = False,
     ) -> GuardrailCheck:
         """Check text against guardrails asynchronously."""
+        from aigis.guardrails import (
+            ContextWindowGuard,
+            PromptInjectionDetector,
+            RAGPoisoningDetector,
+            SecretScanner,
+            StructuredOutputValidator,
+            ToxicityFilter,
+        )
+
         pipeline = GuardrailPipeline()
         active_rails = rails or ["jailbreak", "toxic", "pii"]
 
@@ -244,8 +253,20 @@ class Aigis:
                     pipeline.add_input_rail(JailbreakDetector())
                 case "toxic":
                     pipeline.add_input_rail(ToxicityGuardrail())
+                case "toxicity_filter":
+                    pipeline.add_input_rail(ToxicityFilter())
                 case "pii":
                     pipeline.add_input_rail(PIIDetector(redact=redact))
+                case "injection":
+                    pipeline.add_input_rail(PromptInjectionDetector())
+                case "secrets":
+                    pipeline.add_input_rail(SecretScanner())
+                case "context":
+                    pipeline.add_input_rail(ContextWindowGuard(model=self.model_cfg.model))
+                case "rag_poisoning":
+                    pipeline.add_input_rail(RAGPoisoningDetector())
+                case "structured_output":
+                    pipeline.add_output_rail(StructuredOutputValidator())
                 case "hallucination":
                     adapter = await self._aresolve_adapter()
                     pipeline.add_output_rail(HallucinationDetector(adapter))

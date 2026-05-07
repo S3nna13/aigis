@@ -1,3 +1,4 @@
+from aigis.guardrails.constitutional import ConstitutionalCritique
 from aigis.guardrails.context import ContextWindowGuard, TokenBudget, count_tokens, estimate_tokens
 from aigis.guardrails.engine import Guardrail, GuardrailPipeline, GuardrailResult
 from aigis.guardrails.hallucination import HallucinationDetector
@@ -27,4 +28,5 @@ __all__ = [
     "SecretScanner",
     "RAGPoisoningDetector",
     "StructuredOutputValidator",
+    "ConstitutionalCritique",
 ]
