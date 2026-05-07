@@ -82,7 +82,12 @@ report:
 | `aigis eval <config>` | Run evaluations |
 | `aigis guard <text>` | Check against guardrails |
 | `aigis run <config>` | Full pipeline (eval + guard) |
-| `aigis dashboard` | Launch web dashboard |
+| `aigis serve` | Launch the FastAPI server |
+| `aigis dashboard` | Launch the web dashboard |
+| `aigis repl` | Interactive REPL for quick checks |
+| `aigis validate <config>` | Validate YAML config without running |
+| `aigis webhooks list\|add\|remove` | Manage webhook subscriptions |
+| `aigis completion bash\|zsh\|fish` | Generate shell completion scripts |
 
 ## Dashboard
 
