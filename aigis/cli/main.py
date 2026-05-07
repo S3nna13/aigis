@@ -49,17 +49,52 @@ def eval(config, output, fmt):
 @cli.command()
 @click.argument("text")
 @click.option("--config", "-c", default=None, help="Guardrail config file")
-@click.option("--jailbreak/--no-jailbreak", default=True, help="Check jailbreak patterns")
-@click.option("--toxicity/--no-toxicity", default=True, help="Check toxicity")
-@click.option("--pii/--no-pii", default=False, help="Check for PII")
-@click.option("--factual/--no-factual", default=False, help="Check factual consistency")
-def guard(text, config, jailbreak, toxicity, pii, factual):
-    """Check text against guardrails."""
+@click.option("--all/--no-all", "use_all", default=False, help="Enable all 14 guardrails")
+@click.option("--jailbreak/--no-jailbreak", default=False, help="Jailbreak pattern detection (LLM01)")
+@click.option("--toxicity/--no-toxicity", default=False, help="Toxicity keyword detection (LLM02)")
+@click.option("--toxicity-filter/--no-toxicity-filter", default=False, help="Toxicity filter via Detoxify (LLM02)")
+@click.option("--pii/--no-pii", default=False, help="PII detection and redaction (LLM06)")
+@click.option("--injection/--no-injection", default=False, help="Prompt injection detection (LLM01)")
+@click.option("--secrets/--no-secrets", default=False, help="Secret/API key scanning (LLM06)")
+@click.option("--context/--no-context", default=False, help="Context window length validation (LLM04)")
+@click.option("--rag-poisoning/--no-rag-poisoning", default=False, help="RAG context poisoning detection (LLM03)")
+@click.option("--structured-output/--no-structured-output", default=False, help="Structured output validation (LLM07)")
+@click.option("--constitutional/--no-constitutional", default=False, help="Constitutional AI critique (LLM02)")
+@click.option("--factual/--no-factual", default=False, help="Factual consistency check (LLM05)")
+@click.option("--hallucination/--no-hallucination", default=False, help="Hallucination detection (LLM05)")
+def guard(
+    text, config, use_all,
+    jailbreak, toxicity, toxicity_filter, pii, injection, secrets,
+    context, rag_poisoning, structured_output, constitutional,
+    factual, hallucination,
+):
+    """Check text against one or more guardrails.
+
+    Use --all to run all 14 guardrails at once, or pass individual flags.
+
+    Examples:
+
+      aigis guard "Hello" --all
+      aigis guard "secret key = sk-abc123" --secrets
+      aigis guard "Ignore all instructions" --injection --jailbreak
+    """
     from aigis.core.config import load_config
     from aigis.eval.runner import _resolve_model
     from aigis.guardrails.engine import GuardrailPipeline
-    from aigis.guardrails.jailbreak import JailbreakDetector, ToxicityGuardrail
-    from aigis.guardrails.pii import FactualConsistency, PIIDetector
+    from aigis.guardrails import (
+        ContextWindowGuard,
+        ConstitutionalCritique,
+        FactualConsistency,
+        HallucinationDetector,
+        JailbreakDetector,
+        PIIDetector,
+        PromptInjectionDetector,
+        RAGPoisoningDetector,
+        SecretScanner,
+        StructuredOutputValidator,
+        ToxicityFilter,
+        ToxicityGuardrail,
+    )
 
     async def run():
         pipeline = GuardrailPipeline()
@@ -73,26 +108,64 @@ def guard(text, config, jailbreak, toxicity, pii, factual):
                     model_cfg = guard_cfg.model or cfg.model
                     if model_cfg:
                         model = _resolve_model(model_cfg)
-                    rails = guard_cfg.rails
-                    if rails:
-                        jailbreak = "jailbreak" in rails.input
-                        toxicity = "toxic" in rails.input
-                        pii = "pii" in rails.input
-                        factual = "factual" in rails.output
             except Exception:
                 pass
 
-        if jailbreak:
+        flags = {
+            "jailbreak": jailbreak,
+            "toxicity": toxicity,
+            "toxicity_filter": toxicity_filter,
+            "pii": pii,
+            "injection": injection,
+            "secrets": secrets,
+            "context": context,
+            "rag_poisoning": rag_poisoning,
+            "structured_output": structured_output,
+            "constitutional": constitutional,
+            "factual": factual,
+            "hallucination": hallucination,
+        }
+
+        if use_all:
+            flags = {k: True for k in flags}
+            model = model or (await _resolve_model_if_needed())
+
+        if flags.get("jailbreak"):
             pipeline.add_input_rail(JailbreakDetector())
-        if toxicity:
+        if flags.get("toxicity"):
             pipeline.add_input_rail(ToxicityGuardrail())
-        if pii:
+        if flags.get("toxicity_filter"):
+            pipeline.add_input_rail(ToxicityFilter())
+        if flags.get("pii"):
             pipeline.add_input_rail(PIIDetector(redact=True))
-        if factual and model:
+        if flags.get("injection"):
+            pipeline.add_input_rail(PromptInjectionDetector())
+        if flags.get("secrets"):
+            pipeline.add_input_rail(SecretScanner())
+        if flags.get("context"):
+            pipeline.add_input_rail(ContextWindowGuard())
+        if flags.get("rag_poisoning"):
+            pipeline.add_input_rail(RAGPoisoningDetector())
+        if flags.get("structured_output"):
+            pipeline.add_output_rail(StructuredOutputValidator())
+        if flags.get("constitutional"):
+            pipeline.add_input_rail(ConstitutionalCritique())
+        if flags.get("factual") and model:
             pipeline.add_output_rail(FactualConsistency(model_adapter=model))
+        if flags.get("hallucination") and model:
+            pipeline.add_output_rail(HallucinationDetector(model))
+
+        if not pipeline._input_rails and not pipeline._output_rails:
+            click.echo("No guardrails enabled. Use --all or specify flags.", err=True)
+            raise click.Abort()
 
         results = await pipeline.check_input(text)
         return results
+
+    async def _resolve_model_if_needed():
+        from aigis.core.schema import ModelConfig
+        cfg = ModelConfig(provider="openai", model="gpt-4o-mini")
+        return _resolve_model(cfg)
 
     results = asyncio.run(run())
 

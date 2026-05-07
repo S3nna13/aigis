@@ -1,0 +1,38 @@
+version: "1"
+aigis: guard
+name: "structured-output-guard"
+description: "OWASP LLM07 — Structured output validation"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+  response_format:
+    type: json_object
+
+guard:
+  rails:
+    output:
+      - structured_output
+
+  structured_output:
+    schema:
+      type: object
+      properties:
+        answer:
+          type: string
+        confidence:
+          type: number
+        sources:
+          type: array
+          items:
+            type: string
+      required:
+        - answer
+        - confidence
+
+actions:
+  structured_output: block
+
+report:
+  format: json
+  output_path: ./reports

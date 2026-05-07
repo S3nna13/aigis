@@ -1,0 +1,29 @@
+version: "1"
+aigis: guard
+name: "pii-guard"
+description: "OWASP LLM06 — PII detection and redaction"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+
+guard:
+  rails:
+    input:
+      - pii
+
+  pii:
+    detect_email: true
+    detect_phone: true
+    detect_ssn: true
+    detect_credit_card: true
+    detect_ip: true
+    detect_zip: true
+    redact: true
+
+actions:
+  pii: redact
+
+report:
+  format: json
+  output_path: ./reports

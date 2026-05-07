@@ -1,0 +1,27 @@
+version: "1"
+aigis: guard
+name: "context-window-guard"
+description: "OWASP LLM04 — Context length validation & padding DoS detection"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+  max_tokens: 4096
+
+guard:
+  rails:
+    input:
+      - context
+
+  context:
+    max_tokens: 128000
+    detect_padding: true
+    detect_trailing_whitespace: true
+    detect_repeat_chars: true
+
+actions:
+  context: block
+
+report:
+  format: json
+  output_path: ./reports

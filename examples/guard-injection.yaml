@@ -1,0 +1,20 @@
+version: "1"
+aigis: guard
+name: "prompt-injection-guard"
+description: "OWASP LLM01 — Prompt injection detection"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+
+guard:
+  rails:
+    input:
+      - injection
+
+actions:
+  injection: block
+
+report:
+  format: json
+  output_path: ./reports

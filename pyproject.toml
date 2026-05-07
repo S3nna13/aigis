@@ -39,7 +39,8 @@ dependencies = [
 openai = ["openai>=1.0"]
 anthropic = ["anthropic>=0.30"]
 ollama = ["ollama>=0.1"]
-all = ["aigis[openai,anthropic,ollama]"]
+tokenizer = ["tiktoken>=0.7"]
+all = ["aigis[openai,anthropic,ollama,tokenizer]"]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.3", "mypy>=1.8", "httpx"]
 
 [project.scripts]

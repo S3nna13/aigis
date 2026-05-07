@@ -1,0 +1,26 @@
+version: "1"
+aigis: guard
+name: "rag-poisoning-guard"
+description: "OWASP LLM03 — RAG context poisoning detection"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+
+guard:
+  rails:
+    input:
+      - rag_poisoning
+
+  rag_poisoning:
+    detect_llamaindex_delimiters: true
+    detect_langchain_delimiters: true
+    detect_injection_fragments: true
+    detect_suspicious_xml: true
+
+actions:
+  rag_poisoning: block
+
+report:
+  format: json
+  output_path: ./reports

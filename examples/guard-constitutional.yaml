@@ -1,0 +1,41 @@
+version: "1"
+aigis: guard
+name: "constitutional-guard"
+description: "Constitutional AI — weighted principle evaluation"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+
+guard:
+  rails:
+    output:
+      - constitutional
+
+  constitutional:
+    principles:
+      - name: helpful
+        weight: 1.0
+        threshold: 0.3
+      - name: harmless
+        weight: 1.0
+        threshold: 0.3
+      - name: no_deception
+        weight: 0.8
+        threshold: 0.3
+      - name: privacy_safe
+        weight: 0.8
+        threshold: 0.3
+      - name: respectful
+        weight: 0.5
+        threshold: 0.3
+      - name: truthful
+        weight: 0.3
+        threshold: 0.3
+
+actions:
+  constitutional: warn
+
+report:
+  format: json
+  output_path: ./reports
