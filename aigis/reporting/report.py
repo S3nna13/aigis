@@ -8,7 +8,10 @@ def format_results(results: Sequence[MetricResult], fmt: str = "table") -> str:
     match fmt:
         case "json":
             return json.dumps(
-                [{"name": r.name, "score": r.score, "passed": r.passed, "reason": r.reason} for r in results],
+                [
+                    {"name": r.name, "score": r.score, "passed": r.passed, "reason": r.reason}
+                    for r in results
+                ],
                 indent=2,
             )
         case "html":
@@ -33,8 +36,8 @@ def _to_html(results: Sequence[MetricResult]) -> str:
         f"""<tr>
           <td>{r.name}</td>
           <td>{r.score:.2f}</td>
-          <td class="{'pass' if r.passed else 'fail'}">{'PASS' if r.passed else 'FAIL'}</td>
-          <td>{r.reason or ''}</td>
+          <td class="{"pass" if r.passed else "fail"}">{"PASS" if r.passed else "FAIL"}</td>
+          <td>{r.reason or ""}</td>
         </tr>"""
         for r in results
     )

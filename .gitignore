@@ -32,9 +32,8 @@ Thumbs.db
 
 # Reports
 output/
-*.html
-*.json
 results/
+reports/
 
 # Dashboard
 dashboard/dist/

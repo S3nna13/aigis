@@ -96,6 +96,7 @@ def run(config, output):
     pipeline.add_input_rail(ToxicityGuardrail())
 
     from aigis.reporting.report import format_results
+
     output_path = Path(output)
     output_path.mkdir(parents=True, exist_ok=True)
     (output_path / "eval_results.json").write_text(format_results(eval_results, fmt="json"))
@@ -112,7 +113,7 @@ def dashboard(port, host):
     click.echo(f"Open http://{host}:{port} in your browser")
     import subprocess
     import sys
-    import os
+
     dashboard_dir = str(Path(__file__).parent.parent.parent / "dashboard")
     subprocess.run(
         [sys.executable, "-m", "http.server", str(port), "--bind", host],

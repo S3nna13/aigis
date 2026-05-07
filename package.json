@@ -1,0 +1,16 @@
+{
+  "name": "aigis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AIGIS — CLI + Dashboard for AI Guardrail & Integration System",
+  "workspaces": [
+    "cli",
+    "dashboard"
+  ],
+  "scripts": {
+    "cli": "npm run -w cli start",
+    "dashboard": "npm run -w dashboard dev",
+    "build": "npm run -w cli build && npm run -w dashboard build",
+    "lint": "npm run -w cli lint && npm run -w dashboard lint"
+  }
+}

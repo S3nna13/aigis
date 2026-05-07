@@ -40,8 +40,14 @@ class JailbreakDetector(Guardrail):
             name=self.name,
             passed=score < self.threshold,
             score=score,
-            reason=f"Found {len(matches)} jailbreak pattern(s): {matches}" if matches else "No jailbreak patterns detected",
-            severity="critical" if score >= 0.7 else "warning" if score >= self.threshold else "info",
+            reason=f"Found {len(matches)} jailbreak pattern(s): {matches}"
+            if matches
+            else "No jailbreak patterns detected",
+            severity="critical"
+            if score >= 0.7
+            else "warning"
+            if score >= self.threshold
+            else "info",
         )
 
 
@@ -49,8 +55,15 @@ class ToxicityGuardrail(Guardrail):
     name = "toxicity"
 
     TOXIC_PATTERNS = [
-        "hate", "kill", "destroy", "stupid", "idiot",
-        "racist", "sexist", "violence", "attack",
+        "hate",
+        "kill",
+        "destroy",
+        "stupid",
+        "idiot",
+        "racist",
+        "sexist",
+        "violence",
+        "attack",
     ]
 
     def __init__(self, threshold: float = 0.5):
@@ -65,5 +78,9 @@ class ToxicityGuardrail(Guardrail):
             passed=score < self.threshold,
             score=score,
             reason=f"Toxic content detected: {matches}" if matches else "No toxic content detected",
-            severity="critical" if score >= 0.7 else "warning" if score >= self.threshold else "info",
+            severity="critical"
+            if score >= 0.7
+            else "warning"
+            if score >= self.threshold
+            else "info",
         )

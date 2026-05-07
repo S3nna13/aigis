@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Literal
 from pydantic import BaseModel, Field
 
 
@@ -33,9 +33,9 @@ class TestCase(BaseModel):
 
 
 class EvalConfig(BaseModel):
-    name: str
+    name: str | None = None
     description: str | None = None
-    model: ModelConfig
+    model: ModelConfig | None = None
     prompts: list[PromptTemplate] | list[str]
     tests: list[TestCase]
     assertions: list[AssertionConfig]

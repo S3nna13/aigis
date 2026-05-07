@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 export const runCommand = new Command("run")
   .description("Run a full pipeline (eval + guardrails)")
@@ -7,14 +7,9 @@ export const runCommand = new Command("run")
   .option("-o, --output <dir>", "output directory", "./reports")
   .action((configPath: string, options: { output: string }) => {
     try {
-      execSync(`aigis run "${configPath}" --output "${options.output}"`, {
-        stdio: "inherit",
-      });
+      execFileSync("aigis", ["run", configPath, "--output", options.output], { stdio: "inherit" })
     } catch {
       console.log("Running full AIGIS pipeline...\n");
-      execSync(
-        `python -m aigis.cli.main run "${configPath}" --output "${options.output}"`,
-        { stdio: "inherit" }
-      );
+      execFileSync("python", ["-m", "aigis.cli.main", "run", configPath, "--output", options.output], { stdio: "inherit" })
     }
   });

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import chalk from "chalk";
 
 export const guardCommand = new Command("guard")
@@ -8,12 +8,12 @@ export const guardCommand = new Command("guard")
   .option("--no-jailbreak", "skip jailbreak detection")
   .option("--no-toxicity", "skip toxicity check")
   .action((text: string, options: { jailbreak: boolean; toxicity: boolean }) => {
-    const args = [`"${text}"`];
+    const args = [text];
     if (!options.jailbreak) args.push("--no-jailbreak");
     if (!options.toxicity) args.push("--no-toxicity");
 
     try {
-      execSync(`aigis guard ${args.join(" ")}`, { stdio: "inherit" });
+      execFileSync("aigis", ["guard", ...args], { stdio: "inherit" });
     } catch {
       console.log(chalk.cyan("\nAIGIS Guardrail Check"));
       console.log(chalk.gray("─".repeat(50)));

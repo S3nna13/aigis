@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from aigis.models.base import ModelAdapter
 
@@ -43,4 +43,4 @@ class Guardrail:
     name: str
 
     async def check(self, text: str, context: str | None = None) -> GuardrailResult:
-        ...
+        raise NotImplementedError

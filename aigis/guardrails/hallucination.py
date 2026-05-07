@@ -11,7 +11,12 @@ class HallucinationDetector(Guardrail):
 
     async def check(self, text: str, context: str | None = None) -> GuardrailResult:
         if not context:
-            return GuardrailResult(name=self.name, passed=True, score=1.0, reason="No context provided for fact-checking")
+            return GuardrailResult(
+                name=self.name,
+                passed=True,
+                score=1.0,
+                reason="No context provided for fact-checking",
+            )
         prompt = f"""Context: {context}
 
 Statement: {text}
@@ -21,6 +26,7 @@ Is the statement factually supported by the context? Answer only: YES or NO, the
         output = resp.content.strip().upper()
         is_supported = output.startswith("YES")
         import re
+
         scores = re.findall(r"0\.\d+|1\.0", output)
         confidence = float(scores[0]) if scores else 0.5
         score = confidence if is_supported else 1.0 - confidence

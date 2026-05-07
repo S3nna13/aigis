@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { resolve } from "path";
 
 export const dashboardCommand = new Command("dashboard")
@@ -13,16 +13,10 @@ export const dashboardCommand = new Command("dashboard")
     console.log(`Open http://${options.host}:${options.port}`);
 
     try {
-      execSync(
-        `npx vite --port ${options.port} --host ${options.host}`,
-        { cwd: dashboardDir, stdio: "inherit" }
-      );
+      execFileSync("npx", ["vite", "--port", options.port, "--host", options.host], { cwd: dashboardDir, stdio: "inherit" })
     } catch {
       console.log("Installing dashboard dependencies...");
-      execSync("npm install", { cwd: dashboardDir, stdio: "inherit" });
-      execSync(
-        `npx vite --port ${options.port} --host ${options.host}`,
-        { cwd: dashboardDir, stdio: "inherit" }
-      );
+      execFileSync("npm", ["install"], { cwd: dashboardDir, stdio: "inherit" });
+      execFileSync("npx", ["vite", "--port", options.port, "--host", options.host], { cwd: dashboardDir, stdio: "inherit" })
     }
   });

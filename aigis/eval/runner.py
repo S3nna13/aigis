@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Sequence
+
 
 from aigis.core.config import load_config
-from aigis.core.schema import AigisConfig, AssertionConfig, TestCase
+from aigis.core.schema import AigisConfig, AssertionConfig
 from aigis.eval.metrics import Contains, ExactMatch, LLMJudge, Metric, MetricResult
 from aigis.models.base import Message, ModelAdapter
 
@@ -19,7 +19,9 @@ def _build_metric(assertion: AssertionConfig, model: ModelAdapter | None = None)
             return ExactMatch()
 
 
-async def run_eval(config: str | Path | AigisConfig, model_override: ModelAdapter | None = None) -> list[MetricResult]:
+async def run_eval(
+    config: str | Path | AigisConfig, model_override: ModelAdapter | None = None
+) -> list[MetricResult]:
     if isinstance(config, (str, Path)):
         parsed = load_config(str(config))
     else:
@@ -34,7 +36,11 @@ async def run_eval(config: str | Path | AigisConfig, model_override: ModelAdapte
         msg = "No eval configuration found"
         raise ValueError(msg)
 
-    model = model_override or _resolve_model(eval_cfg.model)
+    model_cfg = eval_cfg.model or parsed.model
+    if not model_cfg:
+        msg = "No model configuration found"
+        raise ValueError(msg)
+    model = model_override or _resolve_model(model_cfg)
     results: list[MetricResult] = []
 
     for test in eval_cfg.tests:
@@ -46,7 +52,9 @@ async def run_eval(config: str | Path | AigisConfig, model_override: ModelAdapte
 
             for assertion in eval_cfg.assertions:
                 metric = _build_metric(assertion, model)
-                result = await metric.measure(input=test.input, output=output, expected=test.expected)
+                result = await metric.measure(
+                    input=test.input, output=output, expected=test.expected
+                )
                 results.append(result)
 
     return results
@@ -54,6 +62,7 @@ async def run_eval(config: str | Path | AigisConfig, model_override: ModelAdapte
 
 def _resolve_model(cfg) -> ModelAdapter:
     from aigis.models.openai_adapter import OpenAIAdapter
+
     match cfg.provider:
         case "openai":
             return OpenAIAdapter(model=cfg.model, api_key=cfg.api_key, base_url=cfg.base_url)

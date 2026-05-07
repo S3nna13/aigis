@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { parse as parseYaml } from "yaml";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 export const evalCommand = new Command("eval")
   .description("Run evaluations defined in a YAML config")
@@ -21,10 +21,7 @@ export const evalCommand = new Command("eval")
     console.log();
 
     try {
-      const result = execSync(
-        `aigis eval "${configPath}" --output "${options.output}" --format "${options.format}"`,
-        { stdio: "inherit" }
-      );
+      const result = execFileSync("aigis", ["eval", configPath, "--output", options.output, "--format", options.format], { stdio: "inherit" })
     } catch {
       console.error("\nFalling back to Python runner...");
     }
