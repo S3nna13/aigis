@@ -111,5 +111,5 @@ class ConstitutionalCritique(Guardrail):
             passed=passed,
             score=total_score,
             reason=reason,
-            severity="critical" if total_score > 0.7 else "warning" if violations else "info",
+            severity="critical" if total_score > 0.5 else "warning" if violations else "info",
         )
