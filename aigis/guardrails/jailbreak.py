@@ -35,7 +35,17 @@ class JailbreakDetector(Guardrail):
     async def check(self, text: str, context: str | None = None) -> GuardrailResult:
         text_lower = text.lower()
         matches = [p for p in self.JAILBREAK_PATTERNS if p.lower() in text_lower]
+
+        jb_words = {
+            "ignore", "previous", "instructions", "bypass", "override",
+            "forget", "restrictions", "personality", "pretend", "roleplay",
+            "developer", "jailbreak", "jailbroken", "dan", "Restrictions",
+        }
+        found_words = {w for w in jb_words if w in text_lower}
         score = min(1.0, len(matches) / 5.0)
+        word_score = min(1.0, len(found_words) / 4.0)
+        score = max(score, word_score)
+
         return GuardrailResult(
             name=self.name,
             passed=score < self.threshold,
@@ -66,7 +76,7 @@ class ToxicityGuardrail(Guardrail):
         "attack",
     ]
 
-    def __init__(self, threshold: float = 0.5):
+    def __init__(self, threshold: float = 0.3):
         self.threshold = threshold
 
     async def check(self, text: str, context: str | None = None) -> GuardrailResult:
