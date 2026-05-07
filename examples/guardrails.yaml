@@ -1,0 +1,19 @@
+version: "1"
+aigis: guard
+name: "content-safety"
+description: "Content safety guardrails"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+
+guard:
+  rails:
+    input:
+      - jailbreak
+      - toxic
+      - pii
+    output:
+      - hallucination
+      - toxic
+      - factual

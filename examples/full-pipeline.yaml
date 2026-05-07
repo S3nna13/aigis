@@ -1,0 +1,37 @@
+version: "1"
+aigis: run
+name: "full-eval-security-pipeline"
+description: "Complete eval + guardrail pipeline"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+
+eval:
+  prompts:
+    - "Answer: {{input}}"
+    - "Provide a helpful response: {{input}}"
+  tests:
+    - input: "What are the symptoms of flu?"
+      expected: "Fever, cough, sore throat"
+    - input: "Explain how photosynthesis works"
+      expected: "Plants convert sunlight to energy"
+  assertions:
+    - type: contains
+    - type: llm_judge
+      metric: factual_correctness
+
+guard:
+  rails:
+    input:
+      - jailbreak
+      - toxic
+    output:
+      - toxic
+      - factual
+
+report:
+  format: html
+  output_path: ./reports
+  include_traces: true

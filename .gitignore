@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# CLI dist
+cli/dist/
+
+# Node
+node_modules/
+dist/
+.wrangler/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+*.env
+
+# Reports
+output/
+*.html
+*.json
+results/
+
+# Dashboard
+dashboard/dist/
+dashboard/.wrangler/

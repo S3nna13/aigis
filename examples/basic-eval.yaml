@@ -1,0 +1,30 @@
+version: "1"
+aigis: eval
+name: "basic-correctness"
+description: "Simple correctness evaluation"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+
+eval:
+  prompts:
+    - "Answer concisely: {{input}}"
+    - "Respond to the following: {{input}}"
+  tests:
+    - input: "What is the capital of France?"
+      expected: "Paris"
+    - input: "What is 2+2?"
+      expected: "4"
+    - input: "Who wrote Romeo and Juliet?"
+      expected: "William Shakespeare"
+  assertions:
+    - type: contains
+    - type: llm_judge
+      metric: factual_correctness
+
+report:
+  format: html
+  output_path: ./reports
+  include_scores: true

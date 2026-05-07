@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --aigis-primary: #6366f1;
+  --aigis-success: #22c55e;
+  --aigis-warning: #f59e0b;
+  --aigis-danger: #ef4444;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1e1b4b;
+}
+::-webkit-scrollbar-thumb {
+  background: #4338ca;
+  border-radius: 3px;
+}
