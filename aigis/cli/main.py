@@ -157,6 +157,102 @@ def run(config, output):
 
 
 @cli.command()
+@click.option("--model", default="gpt-4o-mini", help="Model to use")
+@click.option("--provider", default="openai", help="Model provider")
+def repl(model, provider):
+    """Interactive REPL for quick guard checks and eval queries."""
+    import asyncio
+    from aigis.guardrails.engine import GuardrailPipeline
+    from aigis.guardrails.jailbreak import JailbreakDetector, ToxicityGuardrail
+    from aigis.guardrails.pii import PIIDetector
+    from aigis.models.anthropic_adapter import AnthropicAdapter
+    from aigis.models.local_adapter import LocalAdapter
+    from aigis.models.ollama_adapter import OllamaAdapter
+    from aigis.models.openai_adapter import OpenAIAdapter
+
+    def make_adapter():
+        match provider:
+            case "openai":
+                return OpenAIAdapter(model=model)
+            case "anthropic":
+                return AnthropicAdapter(model=model)
+            case "ollama":
+                return OllamaAdapter(model=model)
+            case "local":
+                return LocalAdapter(model=model)
+            case _:
+                return OpenAIAdapter(model=model)
+
+    click.echo(f"AIGIS Interactive REPL (model={provider}/{model})")
+    click.echo("Commands: guard <text> | eval <input> | quit")
+    click.echo("-" * 50)
+
+    pipeline = GuardrailPipeline()
+    pipeline.add_input_rail(JailbreakDetector())
+    pipeline.add_input_rail(ToxicityGuardrail())
+    pipeline.add_input_rail(PIIDetector())
+
+    adapter = make_adapter()
+
+    while True:
+        try:
+            user_input = click.prompt("\naigis> ", prompt_suffix="").strip()
+        except (EOFError, KeyboardInterrupt):
+            click.echo("\nGoodbye!")
+            break
+
+        if not user_input:
+            continue
+
+        parts = user_input.split(maxsplit=1)
+        cmd = parts[0].lower()
+        arg = parts[1] if len(parts) > 1 else ""
+
+        if cmd in ("quit", "exit", "q"):
+            click.echo("Goodbye!")
+            break
+
+        if cmd == "guard":
+            if not arg:
+                click.echo("Usage: guard <text>")
+                continue
+
+            async def run_guard():
+                return await pipeline.check_input(arg)
+
+            results = asyncio.run(run_guard())
+            for r in results:
+                icon = "PASS" if r.passed else "FAIL"
+                click.echo(f"  [{icon}] {r.name}: {r.score:.2f} — {r.reason}")
+
+        elif cmd == "eval":
+            if not arg:
+                click.echo("Usage: eval <input>")
+                continue
+
+            async def run_eval():
+                from aigis.models.base import Message
+
+                resp = await adapter.generate([Message(role="user", content=arg)])
+                return resp.content
+
+            output = asyncio.run(run_eval())
+            click.echo(f"Response: {output}")
+            guard_results = asyncio.run(pipeline.check_input(output))
+            for r in guard_results:
+                icon = "PASS" if r.passed else "FAIL"
+                click.echo(f"  [{icon}] {r.name}: {r.score:.2f}")
+
+        elif cmd == "help":
+            click.echo("Commands:")
+            click.echo("  guard <text>  — Run guardrail checks on text")
+            click.echo("  eval <input>  — Generate response and run guardrails")
+            click.echo("  quit / exit  — Exit REPL")
+        else:
+            click.echo(f"Unknown command: {cmd}. Try 'help'.")
+
+
+@cli.command()
 @click.option("--port", "-p", default=8080, help="API server port")
 @click.option("--host", default="127.0.0.1", help="API server host")
 def serve(port, host):

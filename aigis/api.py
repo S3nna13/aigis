@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-app = FastAPI(title="AIGIS API", version="0.1.0")
-
+app = FastAPI(
+    title="AIGIS API",
+    description="REST API for the AI Guardrail & Integration System",
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,14 +28,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_DIR = Path("./reports")
+DATA_DIR = Path(os.getenv("AIGIS_DATA_DIR", "./reports"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+API_KEY = os.getenv("AIGIS_API_KEY", "")
+
+
+async def verify_api_key(request: Request) -> bool:
+    if not API_KEY:
+        return True
+    key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
+    return key == API_KEY
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if request.url.path in ("/docs", "/redoc", "/openapi.json", "/api/health"):
+        return await call_next(request)
+    if not await verify_api_key(request):
+        return Response(
+            content=json.dumps({"detail": "Invalid or missing API key"}),
+            status_code=401,
+            media_type="application/json",
+        )
+    return await call_next(request)
 
 
 class EvalRunRequest(BaseModel):
     config_path: str | None = None
     config_yaml: str | None = None
     name: str | None = None
+    stream: bool = False
 
 
 class GuardrailCheckRequest(BaseModel):
@@ -66,32 +97,29 @@ def _load_json(filename: str) -> dict | None:
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "0.1.0", "authenticated": bool(API_KEY)}
 
 
 @app.get("/api/evals", response_model=list[dict[str, Any]])
-async def list_evals():
+async def list_evals(skip: int = 0, limit: int = 50):
     evals = []
-    for p in sorted(DATA_DIR.glob("eval_*.json")):
+    for p in sorted(DATA_DIR.glob("eval_*.json"), reverse=True):
         data = _load_json(p.name)
         if data:
             evals.append(data)
-    return evals
+    return evals[skip : skip + limit]
 
 
 @app.post("/api/evals", response_model=EvalRunResponse)
 async def run_eval(req: EvalRunRequest):
-    from aigis.core.config import load_config, validate_config
+    import yaml
+    from aigis.core.config import _merge_top_level, load_config, validate_config
     from aigis.eval.runner import run_eval as _run_eval
 
     if req.config_path:
         cfg = load_config(req.config_path)
     elif req.config_yaml:
-        import yaml
-
         raw = yaml.safe_load(req.config_yaml)
-        from aigis.core.config import _merge_top_level
-
         _merge_top_level(raw)
         cfg = validate_config(raw)
     else:
@@ -101,7 +129,9 @@ async def run_eval(req: EvalRunRequest):
     timestamp = datetime.now(timezone.utc).isoformat()
     name = req.name or cfg.name or "unnamed"
 
+    start = time.perf_counter()
     results = await _run_eval(cfg)
+    latency_ms = (time.perf_counter() - start) * 1000
 
     results_dicts = []
     total_score = 0.0
@@ -133,10 +163,87 @@ async def run_eval(req: EvalRunRequest):
             "failed": len(results) - passed_count,
             "avg_score": round(avg_score, 3),
             "pass_rate": round(pass_rate, 3),
+            "latency_ms": round(latency_ms, 1),
         },
     )
     _store_json(f"eval_{run_id}.json", response.model_dump())
     return response
+
+
+@app.post("/api/evals/stream")
+async def stream_eval(req: EvalRunRequest):
+    import yaml
+
+    from aigis.core.config import _merge_top_level, load_config, validate_config
+
+    if not req.config_path and not req.config_yaml:
+        raise HTTPException(status_code=400, detail="Provide config_path or config_yaml")
+
+    if req.config_path:
+        cfg = load_config(req.config_path)
+    else:
+        raw = yaml.safe_load(req.config_yaml)
+        _merge_top_level(raw)
+        cfg = validate_config(raw)
+
+    run_id = str(uuid.uuid4())[:8]
+    timestamp = datetime.now(timezone.utc).isoformat()
+    name = req.name or cfg.name or "unnamed"
+
+    async def event_stream():
+        start = time.perf_counter()
+        idx = 0
+        async for result in _stream_eval(cfg):
+            idx += 1
+            elapsed = (time.perf_counter() - start) * 1000
+            data = {
+                "event": "result",
+                "id": run_id,
+                "name": name,
+                "timestamp": timestamp,
+                "index": idx,
+                "result": result,
+                "elapsed_ms": round(elapsed, 1),
+            }
+            yield f"data: {json.dumps(data, default=str)}\n\n"
+        total_ms = (time.perf_counter() - start) * 1000
+        yield f"data: {json.dumps({'event': 'done', 'id': run_id, 'total_ms': round(total_ms, 1), 'timestamp': timestamp}, default=str)}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+async def _stream_eval(cfg):
+    from aigis.eval.runner import _build_metric, _resolve_model
+    from aigis.models.base import Message
+
+    eval_cfg = cfg.eval
+    if not eval_cfg:
+        return
+    model_cfg = eval_cfg.model or cfg.model
+    if not model_cfg:
+        return
+    model = _resolve_model(model_cfg)
+
+    for test in eval_cfg.tests:
+        for prompt in eval_cfg.prompts:
+            prompt_text = prompt if isinstance(prompt, str) else prompt.content
+            filled = prompt_text.replace("{{input}}", test.input)
+            resp = await model.generate([Message(role="user", content=filled)])
+            output = resp.content
+
+            for assertion in eval_cfg.assertions:
+                metric = _build_metric(assertion, model)
+                result = await metric.measure(
+                    input=test.input, output=output, expected=test.expected
+                )
+                yield {
+                    "name": result.name,
+                    "score": result.score,
+                    "passed": result.passed,
+                    "reason": result.reason,
+                    "input": test.input,
+                    "output": output,
+                }
 
 
 @app.get("/api/evals/{eval_id}", response_model=EvalRunResponse)
@@ -148,13 +255,13 @@ async def get_eval(eval_id: str):
 
 
 @app.get("/api/guardrails", response_model=list[dict[str, Any]])
-async def list_guardrail_logs():
+async def list_guardrail_logs(skip: int = 0, limit: int = 50):
     logs = []
-    for p in sorted(DATA_DIR.glob("guard_*.json")):
+    for p in sorted(DATA_DIR.glob("guard_*.json"), reverse=True):
         data = _load_json(p.name)
         if data:
             logs.append(data)
-    return logs
+    return logs[skip : skip + limit]
 
 
 @app.post("/api/guardrails/check", response_model=GuardrailCheckResponse)
@@ -174,7 +281,9 @@ async def check_guardrails(req: GuardrailCheckRequest):
             case "pii":
                 pipeline.add_input_rail(PIIDetector(redact=True))
 
+    start = time.perf_counter()
     results = await pipeline.check_input(req.text)
+    (time.perf_counter() - start) * 1000
 
     check_id = str(uuid.uuid4())[:8]
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -190,6 +299,7 @@ async def check_guardrails(req: GuardrailCheckRequest):
                 "score": r.score,
                 "reason": r.reason,
                 "severity": r.severity,
+                "redacted": r.redacted,
             }
             for r in results
         ],
@@ -197,3 +307,21 @@ async def check_guardrails(req: GuardrailCheckRequest):
     )
     _store_json(f"guard_{check_id}.json", response.model_dump())
     return response
+
+
+@app.delete("/api/evals/{eval_id}")
+async def delete_eval(eval_id: str):
+    p = DATA_DIR / f"eval_{eval_id}.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Eval run not found")
+    p.unlink()
+    return {"deleted": eval_id}
+
+
+@app.delete("/api/guardrails/{check_id}")
+async def delete_guardrail_log(check_id: str):
+    p = DATA_DIR / f"guard_{check_id}.json"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Guardrail log not found")
+    p.unlink()
+    return {"deleted": check_id}

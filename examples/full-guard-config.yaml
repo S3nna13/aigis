@@ -1,0 +1,31 @@
+version: "1"
+aigis: guard
+name: "comprehensive-guardrails"
+description: "Full guardrail pipeline with all supported rails"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+
+guard:
+  rails:
+    input:
+      - jailbreak
+      - toxic
+      - pii
+    output:
+      - hallucination
+      - factual
+      - toxic
+
+  actions:
+    jailbreak: "block"
+    toxic: "block"
+    pii: "redact"
+    hallucination: "warn"
+    factual: "block"
+
+report:
+  format: json
+  output_path: ./reports

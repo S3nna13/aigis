@@ -1,0 +1,40 @@
+version: "1"
+aigis: eval
+name: "prompt-variant-comparison"
+description: "A/B test prompt variants for intent classification"
+
+model:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+
+eval:
+  prompts:
+    - id: "direct"
+      content: "Classify the intent: {{input}}"
+      variants:
+        - "Given: {{input}} — What is the user intent?"
+        - "{{input}} → Intent:"
+    - id: "verbose"
+      content: "You are an intent classifier. Read the following user message and determine its intent: {{input}}"
+      variants:
+        - "Analyze this message and tell me the user intent: {{input}}"
+  tests:
+    - input: "Book a flight to New York"
+      expected: "booking"
+    - input: "Show my order history"
+      expected: "account_access"
+    - input: "What is my refund status?"
+      expected: "support"
+  assertions:
+    - type: exact
+      threshold: 0.8
+    - type: regex
+      value: "^[a-z_]+$"
+      metric: intent_format
+
+report:
+  format: json
+  output_path: ./reports
+  include_scores: true
+  include_traces: true
