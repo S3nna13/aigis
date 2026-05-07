@@ -125,6 +125,14 @@ OVERRIDE_MARKERS = [
 class PromptInjectionDetector(Guardrail):
     name = "prompt_injection"
 
+    INJECTION_WORDS = {
+        "ignore", "previous", "instructions", "disregard", "bypass",
+        "override", "forget", "new instructions", "system instructions",
+        "ignore previous", "ignore all", "bypass your", "override your",
+        "no restrictions", "not bound", "free from", "new personality",
+        "act as", "roleplay as", "pretend", "you are now",
+    }
+
     def __init__(self, threshold: float = 0.3):
         self.threshold = threshold
         self._fragment_re = re.compile(
@@ -147,11 +155,14 @@ class PromptInjectionDetector(Guardrail):
         delim_matches = self._delimiter_re.findall(text)
         override_matches = self._override_re.findall(text_lower)
 
+        injection_words_found = {w for w in self.INJECTION_WORDS if w in text_lower}
+        word_score = min(1.0, len(injection_words_found) / 4.0)
+
         fragment_score = min(1.0, len(frag_matches) / 3.0)
         delimiter_score = min(1.0, len(delim_matches) / 2.0)
         override_score = min(1.0, len(override_matches) / 2.0)
 
-        score = max(fragment_score, delimiter_score, override_score)
+        score = max(fragment_score, delimiter_score, override_score, word_score)
 
         reasons = []
         if frag_matches:
@@ -160,6 +171,8 @@ class PromptInjectionDetector(Guardrail):
             reasons.append(f"delimiter tricks: {len(delim_matches)}")
         if override_matches:
             reasons.append(f"override markers: {len(override_matches)}")
+        if word_score > 0.25 and not reasons:
+            reasons.append(f"injection keywords: {len(injection_words_found)}")
 
         passed = score < self.threshold
         reason = "No prompt injection detected" if not reasons else (
