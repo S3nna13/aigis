@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/components/sidebar.tsx","./src/pages/evals.tsx","./src/pages/guardrails.tsx","./src/pages/overview.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/components/sidebar.tsx","./src/pages/evals.tsx","./src/pages/guardrails.tsx","./src/pages/overview.tsx","./src/pages/reports.tsx"],"version":"5.9.3"}

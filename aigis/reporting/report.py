@@ -16,6 +16,8 @@ def format_results(results: Sequence[MetricResult], fmt: str = "table") -> str:
             )
         case "html":
             return _to_html(results)
+        case "markdown":
+            return _to_markdown(results)
         case "table":
             return _to_table(results)
         case _:
@@ -28,6 +30,22 @@ def _to_table(results: Sequence[MetricResult]) -> str:
         status = "PASS" if r.passed else "FAIL"
         reason_short = (r.reason or "")[:45]
         lines.append(f"{r.name:<20} {r.score:<8.2f} {status:<7} {reason_short}")
+    return "\n".join(lines)
+
+
+def _to_markdown(results: Sequence[MetricResult]) -> str:
+    lines = ["# AIGIS Evaluation Report\n"]
+    total = len(results)
+    passed = sum(1 for r in results if r.passed)
+    avg_score = sum(r.score for r in results) / total if total else 0
+
+    lines.append(f"**Summary**: {passed}/{total} passed | Avg score: {avg_score:.2f}\n")
+    lines.append("| Metric | Score | Status | Reason |")
+    lines.append("|--------|-------|--------|--------|")
+    for r in results:
+        status = "PASS" if r.passed else "FAIL"
+        reason = (r.reason or "").replace("|", "\\|")
+        lines.append(f"| {r.name} | {r.score:.2f} | {status} | {reason} |")
     return "\n".join(lines)
 
 

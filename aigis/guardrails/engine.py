@@ -10,6 +10,7 @@ class GuardrailResult:
     score: float
     reason: str | None = None
     severity: str = "info"
+    redacted: str | None = None
 
 
 class GuardrailPipeline:

@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Overview } from "./pages/Overview";
 import { Evals } from "./pages/Evals";
 import { Guardrails } from "./pages/Guardrails";
+import Reports from "./pages/Reports";
 import type { EvalRun } from "./api";
 import { loadLocalResults, saveLocalResults } from "./api";
 
@@ -26,6 +27,7 @@ export function App() {
           {currentPage === "overview" && <Overview evalRuns={evalRuns} />}
           {currentPage === "evals" && <Evals evalRuns={evalRuns} />}
           {currentPage === "guardrails" && <Guardrails />}
+          {currentPage === "reports" && <Reports />}
         </div>
       </main>
     </div>

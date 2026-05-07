@@ -18,7 +18,9 @@ def cli():
 @cli.command()
 @click.argument("config", type=click.Path(exists=True))
 @click.option("--output", "-o", default="./reports", help="Output directory")
-@click.option("--format", "-f", "fmt", default="table", help="Output format: table, json, html")
+@click.option(
+    "--format", "-f", "fmt", default="table", help="Output format: table, json, html, markdown"
+)
 def eval(config, output, fmt):
     """Run evaluations defined in a YAML config file."""
     from aigis.core.config import load_config
@@ -38,6 +40,8 @@ def eval(config, output, fmt):
         (output_path / "results.json").write_text(formatted)
     elif fmt == "html":
         (output_path / "results.html").write_text(formatted)
+    elif fmt == "markdown":
+        (output_path / "results.md").write_text(formatted)
     else:
         click.echo(formatted)
 
@@ -47,18 +51,45 @@ def eval(config, output, fmt):
 @click.option("--config", "-c", default=None, help="Guardrail config file")
 @click.option("--jailbreak/--no-jailbreak", default=True, help="Check jailbreak patterns")
 @click.option("--toxicity/--no-toxicity", default=True, help="Check toxicity")
-def guard(text, config, jailbreak, toxicity):
+@click.option("--pii/--no-pii", default=False, help="Check for PII")
+@click.option("--factual/--no-factual", default=False, help="Check factual consistency")
+def guard(text, config, jailbreak, toxicity, pii, factual):
     """Check text against guardrails."""
-    import asyncio
+    from aigis.core.config import load_config
+    from aigis.eval.runner import _resolve_model
     from aigis.guardrails.engine import GuardrailPipeline
     from aigis.guardrails.jailbreak import JailbreakDetector, ToxicityGuardrail
+    from aigis.guardrails.pii import FactualConsistency, PIIDetector
 
     async def run():
         pipeline = GuardrailPipeline()
+        model = None
+
+        if config:
+            try:
+                cfg = load_config(str(config))
+                guard_cfg = cfg.guard
+                if guard_cfg:
+                    model_cfg = guard_cfg.model or cfg.model
+                    if model_cfg:
+                        model = _resolve_model(model_cfg)
+                    rails = guard_cfg.rails
+                    if rails:
+                        jailbreak = "jailbreak" in rails.input
+                        toxicity = "toxic" in rails.input
+                        pii = "pii" in rails.input
+                        factual = "factual" in rails.output
+            except Exception:
+                pass
+
         if jailbreak:
             pipeline.add_input_rail(JailbreakDetector())
         if toxicity:
             pipeline.add_input_rail(ToxicityGuardrail())
+        if pii:
+            pipeline.add_input_rail(PIIDetector(redact=True))
+        if factual and model:
+            pipeline.add_output_rail(FactualConsistency(model_adapter=model))
 
         results = await pipeline.check_input(text)
         return results
@@ -82,9 +113,12 @@ def guard(text, config, jailbreak, toxicity):
 def run(config, output):
     """Run a full pipeline (eval + guardrails) from a config file."""
     from aigis.core.config import load_config
-    from aigis.eval.runner import run_eval
+    from aigis.eval.runner import _resolve_model, run_eval
     from aigis.guardrails.engine import GuardrailPipeline
+    from aigis.guardrails.hallucination import HallucinationDetector
     from aigis.guardrails.jailbreak import JailbreakDetector, ToxicityGuardrail
+    from aigis.guardrails.pii import PIIDetector
+    from aigis.reporting.report import format_results
 
     cfg = load_config(str(config))
     click.echo(f"Running pipeline: {cfg.name}")
@@ -92,16 +126,45 @@ def run(config, output):
     eval_results = asyncio.run(run_eval(cfg))
 
     pipeline = GuardrailPipeline()
-    pipeline.add_input_rail(JailbreakDetector())
-    pipeline.add_input_rail(ToxicityGuardrail())
-
-    from aigis.reporting.report import format_results
+    if cfg.guard and cfg.guard.rails:
+        rails = cfg.guard.rails
+        for rail_name in rails.input:
+            match rail_name:
+                case "jailbreak":
+                    pipeline.add_input_rail(JailbreakDetector())
+                case "toxic":
+                    pipeline.add_input_rail(ToxicityGuardrail())
+                case "pii":
+                    pipeline.add_input_rail(PIIDetector(redact=True))
+        model_cfg = cfg.guard.model or cfg.model
+        model = _resolve_model(model_cfg) if model_cfg else None
+        for rail_name in rails.output:
+            match rail_name:
+                case "hallucination":
+                    if model:
+                        pipeline.add_output_rail(HallucinationDetector(model))
+                case "toxic":
+                    pipeline.add_output_rail(ToxicityGuardrail())
+    else:
+        pipeline.add_input_rail(JailbreakDetector())
+        pipeline.add_input_rail(ToxicityGuardrail())
 
     output_path = Path(output)
     output_path.mkdir(parents=True, exist_ok=True)
     (output_path / "eval_results.json").write_text(format_results(eval_results, fmt="json"))
 
     click.echo(f"Results written to {output_path}/")
+
+
+@cli.command()
+@click.option("--port", "-p", default=8080, help="API server port")
+@click.option("--host", default="127.0.0.1", help="API server host")
+def serve(port, host):
+    """Launch the AIGIS API server for the dashboard."""
+    import uvicorn
+
+    click.echo(f"Starting AIGIS API server on http://{host}:{port}")
+    uvicorn.run("aigis.api:app", host=host, port=port, reload=True)
 
 
 @cli.command()
