@@ -40,11 +40,11 @@ export function Evals({ evalRuns }: EvalsProps) {
       ) : (
         <div className="space-y-4">
           {filtered.map((run) => {
-            const Icon = run.passRate >= 0.8
-              ? CheckCircle : run.passRate >= 0.5
+            const Icon = run.summary.pass_rate >= 0.8
+              ? CheckCircle : run.summary.pass_rate >= 0.5
               ? HelpCircle : XCircle;
-            const iconColor = run.passRate >= 0.8
-              ? "text-emerald-400" : run.passRate >= 0.5
+            const iconColor = run.summary.pass_rate >= 0.8
+              ? "text-emerald-400" : run.summary.pass_rate >= 0.5
               ? "text-amber-400" : "text-red-400";
 
             return (
@@ -57,14 +57,14 @@ export function Evals({ evalRuns }: EvalsProps) {
                     <Icon className={`w-5 h-5 ${iconColor}`} />
                     <h3 className="font-semibold text-white">{run.name}</h3>
                   </div>
-                  <span className="text-xs text-indigo-400">{run.model}</span>
+                    <span className="text-xs text-indigo-400">{run.summary.total} tests</span>
                 </div>
                 <div className="flex gap-6 text-sm">
                   <span className="text-indigo-300/70">
-                    Score: <span className="text-white font-medium">{(run.avgScore * 100).toFixed(0)}%</span>
+                    Score: <span className="text-white font-medium">{(run.summary.avg_score * 100).toFixed(0)}%</span>
                   </span>
                   <span className="text-indigo-300/70">
-                    Pass Rate: <span className="text-white font-medium">{(run.passRate * 100).toFixed(0)}%</span>
+                    Pass Rate: <span className="text-white font-medium">{(run.summary.pass_rate * 100).toFixed(0)}%</span>
                   </span>
                   <span className="text-indigo-300/70">
                     Tests: <span className="text-white font-medium">{run.results.length}</span>

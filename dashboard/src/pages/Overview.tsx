@@ -9,16 +9,16 @@ interface OverviewProps {
 export function Overview({ evalRuns }: OverviewProps) {
   const totalEvals = evalRuns.length;
   const avgScore = evalRuns.length
-    ? evalRuns.reduce((s, r) => s + r.avgScore, 0) / evalRuns.length
+    ? evalRuns.reduce((s, r) => s + r.summary.avg_score, 0) / evalRuns.length
     : 0;
   const passRate = evalRuns.length
-    ? evalRuns.reduce((s, r) => s + r.passRate, 0) / evalRuns.length
+    ? evalRuns.reduce((s, r) => s + r.summary.pass_rate, 0) / evalRuns.length
     : 0;
 
   const chartData = [...evalRuns].reverse().slice(-10).map((r) => ({
     name: r.name.slice(0, 16),
-    "Avg Score": +(r.avgScore * 100).toFixed(0),
-    "Pass Rate": +(r.passRate * 100).toFixed(0),
+    "Avg Score": +(r.summary.avg_score * 100).toFixed(0),
+    "Pass Rate": +(r.summary.pass_rate * 100).toFixed(0),
   }));
 
   const stats = [
