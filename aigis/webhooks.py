@@ -44,6 +44,7 @@ class WebhookPayload:
 class WebhookConfig:
     url: str
     secret: str | None = None
+    verify_secret: str | None = None
     retries: int = 3
     timeout: float = 10.0
     async_delivery: bool = True
@@ -111,3 +112,50 @@ async def dispatch_webhook(event: WebhookEvent, source: str, data: dict[str, Any
         data=data,
     )
     return await _default_manager.dispatch(payload)
+
+
+def verify_webhook_signature(
+    payload: bytes,
+    signature: str,
+    secret: str,
+    *,
+    max_age_seconds: float = 300.0,
+    timestamp: str | None = None,
+) -> bool:
+    """
+    Verify an incoming webhook signature using HMAC-SHA256.
+
+    Compares the provided signature against the expected HMAC-SHA256 digest
+    of the payload using a timing-safe comparison.
+
+    Args:
+        payload: Raw request body bytes.
+        signature: The full ``X-AIGIS-Signature`` header value (e.g. ``sha256=<hex>``).
+        secret: The webhook secret used to sign.
+        max_age_seconds: Reject payloads older than this (default 5 minutes).
+        timestamp: Optional timestamp from ``X-AIGIS-Timestamp`` header for replay protection.
+
+    Returns:
+        True if signature is valid and payload is not stale.
+    """
+    import hmac
+    import hashlib
+    import time
+
+    if not signature or not secret:
+        return False
+
+    if timestamp:
+        try:
+            ts = float(timestamp)
+            if abs(time.time() - ts) > max_age_seconds:
+                return False
+        except ValueError:
+            return False
+
+    sig_parts = signature.split("=", 1)
+    if len(sig_parts) != 2 or sig_parts[0] not in ("sha256", "sha1"):
+        return False
+
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig_parts[1])

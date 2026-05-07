@@ -18,17 +18,53 @@ from pydantic import BaseModel
 app = FastAPI(
     title="AIGIS API",
     description="REST API for the AI Guardrail & Integration System",
-    version="0.1.0",
+    version="0.2.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("AIGIS_CORS_ORIGINS", "https://localhost:5173,https://127.0.0.1:5173").split(","),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Idempotency-Key", "X-AIGIS-Signature"],
+    expose_headers=["X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
+
+
+class SecurityHeadersMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            response_headers = [
+                (b"strict-transport-security", b"max-age=31536000; includeSubDomains"),
+                (b"x-content-type-options", b"nosniff"),
+                (b"x-frame-options", b"DENY"),
+                (b"x-xss-protection", b"1; mode=block"),
+                (b"content-security-policy", b"default-src 'self'; frame-ancestors 'none'"),
+                (b"referrer-policy", b"strict-origin-when-cross-origin"),
+                (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+            ]
+
+            async def send_with_headers(message):
+                if message["type"] == "http.response.start":
+                    new_headers = list(message.get("headers", [])) + response_headers
+                    await send({**message, "headers": new_headers})
+                else:
+                    await send(message)
+
+            await self.app(scope, receive, send_with_headers)
+        else:
+            await self.app(scope, receive, send)
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Note: middleware order is reversed — last added runs first on request, last on response.
+# SecurityHeadersMiddleware is outermost (runs first), CORSMiddleware is inner.
+
 
 RATE_LIMIT = int(os.getenv("AIGIS_RATE_LIMIT", "100"))
 RATE_WINDOW = int(os.getenv("AIGIS_RATE_WINDOW", "60"))
@@ -342,6 +378,13 @@ async def check_guardrails(req: GuardrailCheckRequest):
     )
     _store_json(f"guard_{check_id}.json", response.model_dump())
 
+    # Audit log guard violation or pass
+    try:
+        from aigis.audit import log_guardrail_result
+        log_guardrail_result(req.text, results, response.passed)
+    except Exception:  # noqa: BLE001
+        pass  # audit logging should never break API responses
+
     # Dispatch webhook
     event = "guardrail.passed" if response.passed else "guardrail.triggered"
     asyncio.create_task(
@@ -406,3 +449,19 @@ async def delete_guardrail_log(check_id: str):
         raise HTTPException(status_code=404, detail="Guardrail log not found")
     p.unlink()
     return {"deleted": check_id}
+
+
+@app.get("/api/audit", response_model=list[dict[str, Any]])
+async def query_audit_logs(
+    event: str | None = None,
+    since: str | None = None,
+    limit: int = 100,
+):
+    from aigis.audit import AuditEvent, query_audit_logs as _query
+
+    evt = AuditEvent(event) if event else None
+    since_dt = None
+    if since:
+        from datetime import datetime
+        since_dt = datetime.fromisoformat(since)
+    return _query(event=evt, since=since_dt, limit=limit)
