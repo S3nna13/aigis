@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from aigis.models.base import Message, ModelAdapter, ModelResponse
+from aigis.utils import CircuitBreaker, with_retry
 
 
 class LocalAdapter(ModelAdapter):
@@ -9,10 +10,13 @@ class LocalAdapter(ModelAdapter):
         model: str,
         api_key: str | None = None,
         base_url: str | None = None,
+        retries: int = 3,
     ):
         self._model = model
         self._base_url = base_url or "http://localhost:8000/v1"
         self._api_key = api_key
+        self._retries = retries
+        self._cb = CircuitBreaker(failure_threshold=5, recovery_timeout=60.0)
 
     @property
     def model_name(self) -> str:
@@ -32,25 +36,24 @@ class LocalAdapter(ModelAdapter):
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self._base_url}/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=120.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        async def _call():
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(
+                    f"{self._base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                )
+                resp.raise_for_status()
+                return resp.json()
+
+        data = await self._cb.call(with_retry, _call, retries=self._retries)
 
         choice = data["choices"][0]
         usage_data = data.get("usage")
         return ModelResponse(
             content=choice["message"]["content"],
             usage=(
-                {
-                    "prompt": usage_data["prompt_tokens"],
-                    "completion": usage_data["completion_tokens"],
-                }
+                {"prompt": usage_data["prompt_tokens"], "completion": usage_data["completion_tokens"]}
                 if usage_data
                 else None
             ),
@@ -72,15 +75,17 @@ class LocalAdapter(ModelAdapter):
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self._base_url}/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=120.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        async def _call():
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(
+                    f"{self._base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                )
+                resp.raise_for_status()
+                return resp.json()
+
+        data = await self._cb.call(with_retry, _call, retries=self._retries)
 
         choice = data["choices"][0]
         return ModelResponse(

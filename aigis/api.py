@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +29,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+RATE_LIMIT = int(os.getenv("AIGIS_RATE_LIMIT", "100"))
+RATE_WINDOW = int(os.getenv("AIGIS_RATE_WINDOW", "60"))
+
+_rate_hits: dict[str, list[float]] = defaultdict(list)
+_rate_lock = asyncio.Lock()
+
+
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path in ("/docs", "/redoc", "/openapi.json", "/api/health"):
+        return await call_next(request)
+
+    key = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+
+    async with _rate_lock:
+        window = _rate_hits[key]
+        cutoff = now - RATE_WINDOW
+        window = [t for t in window if t > cutoff]
+        _rate_hits[key] = window
+
+        if len(window) >= RATE_LIMIT:
+            return Response(
+                content=json.dumps({"detail": f"Rate limit exceeded: {RATE_LIMIT} req/{RATE_WINDOW}s"}),
+                status_code=429,
+                media_type="application/json",
+            )
+        window.append(now)
+
+    return await call_next(request)
+
+
+app.middleware("http")(rate_limit_middleware)
 
 DATA_DIR = Path(os.getenv("AIGIS_DATA_DIR", "./reports"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -306,7 +341,53 @@ async def check_guardrails(req: GuardrailCheckRequest):
         passed=all(r.passed for r in results),
     )
     _store_json(f"guard_{check_id}.json", response.model_dump())
+
+    # Dispatch webhook
+    event = "guardrail.passed" if response.passed else "guardrail.triggered"
+    asyncio.create_task(
+        _dispatch_webhook(event, f"guard_{check_id}", {"check_id": check_id, "text": req.text, "results": response.model_dump()})
+    )
     return response
+
+
+@app.post("/api/webhooks")
+async def register_webhook(url: str, secret: str | None = None, retries: int = 3, timeout: float = 10.0):
+    from aigis.webhooks import WebhookConfig, get_webhook_manager
+
+    manager = get_webhook_manager()
+    config = WebhookConfig(url=url, secret=secret, retries=retries, timeout=timeout)
+    manager.register(config)
+    return {"registered": url, "total_webhooks": len(manager._hooks)}
+
+
+@app.get("/api/webhooks")
+async def list_webhooks():
+    from aigis.webhooks import get_webhook_manager
+
+    manager = get_webhook_manager()
+    return [{"url": h.url, "retries": h.retries, "timeout": h.timeout} for h in manager._hooks]
+
+
+@app.delete("/api/webhooks/{url}")
+async def delete_webhook(url: str):
+    from aigis.webhooks import get_webhook_manager
+
+    manager = get_webhook_manager()
+    count_before = len(manager._hooks)
+    manager.unregister(url)
+    deleted = len(manager._hooks) < count_before
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Webhook not found")
+    return {"deleted": url}
+
+
+async def _dispatch_webhook(event: str, source: str, data: dict):
+    from aigis.webhooks import WebhookEvent, dispatch_webhook
+
+    try:
+        await dispatch_webhook(WebhookEvent(event), source, data)
+    except Exception:  # noqa: BLE001
+        pass  # webhooks should not block API responses
 
 
 @app.delete("/api/evals/{eval_id}")

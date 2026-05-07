@@ -311,3 +311,89 @@ eval:
     - type: exact
 """)
     click.echo(f"Created {target}")
+
+
+@cli.command("validate")
+@click.argument("config", type=click.Path(exists=True))
+def validate(config):
+    """Validate a YAML config file without running anything."""
+    from aigis.core.config import load_config
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    try:
+        cfg = load_config(str(config))
+        console.print(f"[green]Config is valid[/green] — {cfg.name} ({cfg.aigis})")
+        t = Table(title="Config Summary")
+        t.add_column("Field")
+        t.add_column("Value")
+        if cfg.model:
+            t.add_row("provider", cfg.model.provider)
+            t.add_row("model", cfg.model.model)
+        if cfg.aigis == "eval" and cfg.eval:
+            t.add_row("prompts", str(len(cfg.eval.prompts)))
+            t.add_row("tests", str(len(cfg.eval.tests)))
+            t.add_row("assertions", str(len(cfg.eval.assertions)))
+        if cfg.aigis == "guard" and cfg.guard:
+            t.add_row("input_rails", str(cfg.guard.rails.input))
+            t.add_row("output_rails", str(cfg.guard.rails.output))
+        console.print(t)
+    except Exception as exc:
+        console.print(f"[red]Invalid config:[/red] {exc}")
+        raise click.Abort()
+
+
+@cli.command("webhooks")
+@click.argument("action", type=click.Choice(["list", "add", "remove"]))
+@click.option("--url", help="Webhook URL")
+@click.option("--secret", help="HMAC secret for signing")
+def webhooks(action, url, secret):
+    """Manage webhook subscriptions."""
+    import json
+    from pathlib import Path
+
+    hook_file = Path.home() / ".config" / "aigis" / "webhooks.json"
+    hooks = json.loads(hook_file.read_text()) if hook_file.exists() else []
+
+    if action == "list":
+        if not hooks:
+            click.echo("No webhooks registered.")
+        for h in hooks:
+            click.echo(f"  {h['url']} (secret={'yes' if h.get('secret') else 'no'})")
+    elif action == "add":
+        if not url:
+            click.echo("--url required for add", err=True)
+            raise click.Abort()
+        hooks.append({"url": url, "secret": secret})
+        hook_file.parent.mkdir(parents=True, exist_ok=True)
+        hook_file.write_text(json.dumps(hooks, indent=2))
+        click.echo(f"Added webhook: {url}")
+    elif action == "remove":
+        if not url:
+            click.echo("--url required for remove", err=True)
+            raise click.Abort()
+        hooks = [h for h in hooks if h["url"] != url]
+        hook_file.write_text(json.dumps(hooks, indent=2))
+        click.echo(f"Removed webhook: {url}")
+
+
+@cli.command("completion")
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]))
+def completion(shell):
+    """Generate shell completion scripts."""
+    if shell == "bash":
+        script = f"{cli.to_info_dict()['name']} completion bash | source /dev/stdin"
+        click.echo(f"# Add to ~/.bashrc or ~/.profile:\n{script}")
+    elif shell == "zsh":
+        script = f"source <({cli.name} completion zsh)"
+        click.echo(f"# Add to ~/.zshrc:\n{script}")
+    elif shell == "fish":
+        script = f"{cli.name} completion fish | source"
+        click.echo(f"# Add to ~/.config/fish/config.fish:\n{script}")
+    elif shell == "powershell":
+        script = f"{cli.name} completion powershell >> $PROFILE"
+        click.echo(f"# Run in PowerShell:\n{script}")
+
+
+cli.add_command(completion)
