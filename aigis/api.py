@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import time
 import uuid
 from collections import defaultdict
@@ -22,9 +23,14 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+CORS_ORIGINS = os.getenv("AIGIS_CORS_ORIGINS", "https://localhost:5173,https://127.0.0.1:5173")
+_cors_origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
+if not _cors_origins:
+    _cors_origins = ["https://localhost:5173", "https://127.0.0.1:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("AIGIS_CORS_ORIGINS", "https://localhost:5173,https://127.0.0.1:5173").split(","),
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Idempotency-Key", "X-AIGIS-Signature"],
@@ -42,10 +48,9 @@ class SecurityHeadersMiddleware:
                 (b"strict-transport-security", b"max-age=31536000; includeSubDomains"),
                 (b"x-content-type-options", b"nosniff"),
                 (b"x-frame-options", b"DENY"),
-                (b"x-xss-protection", b"1; mode=block"),
-                (b"content-security-policy", b"default-src 'self'; frame-ancestors 'none'"),
                 (b"referrer-policy", b"strict-origin-when-cross-origin"),
                 (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+                (b"content-security-policy", b"default-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
             ]
 
             async def send_with_headers(message):
@@ -107,7 +112,7 @@ API_KEY = os.getenv("AIGIS_API_KEY", "")
 
 async def verify_api_key(request: Request) -> bool:
     if not API_KEY:
-        return True
+        return False
     key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
     return key == API_KEY
 
@@ -168,7 +173,7 @@ def _load_json(filename: str) -> dict | None:
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0", "authenticated": bool(API_KEY)}
+    return {"status": "ok", "version": "0.2.0"}
 
 
 @app.get("/api/evals", response_model=list[dict[str, Any]])
@@ -283,6 +288,33 @@ async def stream_eval(req: EvalRunRequest):
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+INJECTION_PATTERNS = [
+    re.compile(r, re.IGNORECASE) for r in [
+        r"ignore\s+(all\s+)?previous",
+        r"ignore\s+your\s+instructions",
+        r"disregard\s+previous",
+        r"disregard\s+your",
+        r"new\s+instructions:\s*you\s+are",
+        r"you\s+are\s+now\s+\w+",
+        r"pretend\s+you\s+are",
+        r"roleplay\s+as",
+        r"<\s*script",
+        r"javascript:",
+        r"on\s*\w+\s*=",
+        r"\{\{.*?\}\}",
+    ]
+]
+
+DANGEROUS_PROMPT_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _sanitize_prompt(text: str) -> str:
+    text = DANGEROUS_PROMPT_CHARS.sub("", text)
+    for pattern in INJECTION_PATTERNS:
+        text = pattern.sub("[REDACTED]", text)
+    return text
+
+
 async def _stream_eval(cfg):
     from aigis.eval.runner import _build_metric, _resolve_model
     from aigis.models.base import Message
@@ -298,7 +330,8 @@ async def _stream_eval(cfg):
     for test in eval_cfg.tests:
         for prompt in eval_cfg.prompts:
             prompt_text = prompt if isinstance(prompt, str) else prompt.content
-            filled = prompt_text.replace("{{input}}", test.input)
+            safe_input = _sanitize_prompt(test.input)
+            filled = prompt_text.replace("{{input}}", safe_input)
             resp = await model.generate([Message(role="user", content=filled)])
             output = resp.content
 

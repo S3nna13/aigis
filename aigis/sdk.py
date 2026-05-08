@@ -236,6 +236,7 @@ class Aigis:
     ) -> GuardrailCheck:
         """Check text against guardrails asynchronously."""
         from aigis.guardrails import (
+            ConstitutionalCritique,
             ContextWindowGuard,
             PromptInjectionDetector,
             RAGPoisoningDetector,
@@ -273,6 +274,8 @@ class Aigis:
                 case "factual":
                     adapter = await self._aresolve_adapter()
                     pipeline.add_output_rail(FactualConsistency(model_adapter=adapter))
+                case "constitutional":
+                    pipeline.add_input_rail(ConstitutionalCritique())
 
         start = time.perf_counter()
         results = await pipeline.check_input(text)
