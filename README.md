@@ -1,4 +1,5 @@
 # AIGIS — AI Guardrail & Integration System
+**by [Aurelius Research](https://github.com/aurelius-research)**
 
 A unified harness for evaluating, securing, and orchestrating LLM-powered applications. Combines evaluation benchmarks, safety guardrails, agent orchestration, and prompt testing into one cohesive framework.
 
