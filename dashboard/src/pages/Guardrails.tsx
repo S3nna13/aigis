@@ -10,13 +10,18 @@ interface RailStatus {
 }
 
 const defaultRails: RailStatus[] = [
-  { name: "Jailbreak Detection", type: "input", status: "active", hits: 0, lastTriggered: null },
-  { name: "Toxicity Check", type: "input", status: "active", hits: 0, lastTriggered: null },
-  { name: "PII Masking", type: "input", status: "active", hits: 0, lastTriggered: null },
-  { name: "Hallucination Detection", type: "output", status: "active", hits: 0, lastTriggered: null },
-  { name: "Factual Consistency", type: "output", status: "inactive", hits: 0, lastTriggered: null },
-  { name: "Content Safety", type: "output", status: "active", hits: 0, lastTriggered: null },
-  { name: "Context Relevance", type: "retrieval", status: "inactive", hits: 0, lastTriggered: null },
+  { name: "JailbreakDetector", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "ToxicityGuardrail", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "ToxicityFilter", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "PIIDetector", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "PromptInjectionDetector", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "SecretScanner", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "ContextWindowGuard", type: "input", status: "active", hits: 0, lastTriggered: null },
+  { name: "ConstitutionalCritique", type: "output", status: "active", hits: 0, lastTriggered: null },
+  { name: "FactualConsistency", type: "output", status: "active", hits: 0, lastTriggered: null },
+  { name: "HallucinationDetector", type: "output", status: "active", hits: 0, lastTriggered: null },
+  { name: "RAGPoisoningDetector", type: "retrieval", status: "inactive", hits: 0, lastTriggered: null },
+  { name: "StructuredOutputValidator", type: "output", status: "inactive", hits: 0, lastTriggered: null },
 ];
 
 export function Guardrails() {

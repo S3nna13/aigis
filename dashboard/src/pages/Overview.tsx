@@ -3,6 +3,7 @@ import { FileText, Shield, AlertTriangle, TrendingUp, Zap, Coins } from "lucide-
 import { useEffect, useState } from "react";
 import type { EvalRun } from "../api";
 import { sanitize } from "../api";
+import { GuardCheckPanel } from "../components/GuardCheckPanel";
 
 interface ApiMetrics {
   requests: number;
@@ -48,7 +49,7 @@ export function Overview({ evalRuns }: OverviewProps) {
     { label: "Evaluations", value: totalEvals, icon: FileText, color: "from-blue-500 to-indigo-600" },
     { label: "Avg Score", value: `${(avgScore * 100).toFixed(0)}%`, icon: TrendingUp, color: "from-emerald-500 to-teal-600" },
     { label: "Pass Rate", value: `${(passRate * 100).toFixed(0)}%`, icon: Shield, color: "from-violet-500 to-purple-600" },
-    { label: "Active Rails", value: "12", icon: AlertTriangle, color: "from-amber-500 to-orange-600" },
+    { label: "Active Rails", value: "14", icon: AlertTriangle, color: "from-amber-500 to-orange-600" },
   ];
 
   return (
@@ -109,6 +110,11 @@ export function Overview({ evalRuns }: OverviewProps) {
           </div>
         </div>
       )}
+
+      <div className="bg-indigo-950/40 border border-indigo-900/50 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Guardrail Check</h2>
+        <GuardCheckPanel />
+      </div>
 
       <div className="bg-indigo-950/40 border border-indigo-900/50 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Recent Evaluations</h2>

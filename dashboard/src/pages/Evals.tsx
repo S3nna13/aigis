@@ -1,18 +1,34 @@
 import { useState } from "react";
-import { Search, Download, CheckCircle, XCircle, HelpCircle } from "lucide-react";
+import { Search, CheckCircle, XCircle, HelpCircle, ChevronRight } from "lucide-react";
 import type { EvalRun } from "../api";
 import { sanitize } from "../api";
+import { EvalDetail } from "./EvalDetail";
 
 interface EvalsProps {
   evalRuns: EvalRun[];
+  onDelete?: (id: string) => void;
 }
 
-export function Evals({ evalRuns }: EvalsProps) {
+export function Evals({ evalRuns, onDelete }: EvalsProps) {
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<EvalRun | null>(null);
 
   const filtered = evalRuns.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (selected) {
+    return (
+      <EvalDetail
+        run={selected}
+        onBack={() => setSelected(null)}
+        onDelete={(id) => {
+          onDelete?.(id);
+          setSelected(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -39,42 +55,55 @@ export function Evals({ evalRuns }: EvalsProps) {
           <p className="text-sm mt-2">Run your first evaluation using the CLI</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filtered.map((run) => {
-            const Icon = run.summary.pass_rate >= 0.8
-              ? CheckCircle : run.summary.pass_rate >= 0.5
-              ? HelpCircle : XCircle;
-            const iconColor = run.summary.pass_rate >= 0.8
-              ? "text-emerald-400" : run.summary.pass_rate >= 0.5
-              ? "text-amber-400" : "text-red-400";
+            const Icon =
+              run.summary.pass_rate >= 0.8
+                ? CheckCircle
+                : run.summary.pass_rate >= 0.5
+                ? HelpCircle
+                : XCircle;
+            const iconColor =
+              run.summary.pass_rate >= 0.8
+                ? "text-emerald-400"
+                : run.summary.pass_rate >= 0.5
+                ? "text-amber-400"
+                : "text-red-400";
 
             return (
-              <div
+              <button
                 key={run.id}
-                className="bg-indigo-950/40 border border-indigo-900/50 rounded-xl p-5 hover:border-indigo-700/50 transition-all"
+                onClick={() => setSelected(run)}
+                className="w-full bg-indigo-950/40 border border-indigo-900/50 rounded-xl p-5 hover:border-indigo-700/50 transition-all text-left flex items-center gap-4"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 ${iconColor}`} />
-                    <h3 className="font-semibold text-white">{sanitize(run.name)}</h3>
+                <Icon className={`w-5 h-5 flex-shrink-0 ${iconColor}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h3 className="font-semibold text-white truncate">{sanitize(run.name)}</h3>
+                    <span className="text-xs text-indigo-400 flex-shrink-0 ml-3">
+                      {run.summary.total} tests
+                    </span>
                   </div>
-                    <span className="text-xs text-indigo-400">{run.summary.total} tests</span>
+                  <div className="flex items-center gap-5 text-xs text-indigo-300/70">
+                    <span>
+                      Score:{" "}
+                      <span className="text-white font-medium">
+                        {(run.summary.avg_score * 100).toFixed(0)}%
+                      </span>
+                    </span>
+                    <span>
+                      Pass:{" "}
+                      <span className="text-white font-medium">
+                        {run.summary.passed}/{run.summary.total}
+                      </span>
+                    </span>
+                    <span className="text-indigo-400/50">
+                      {new Date(run.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex gap-6 text-sm">
-                  <span className="text-indigo-300/70">
-                    Score: <span className="text-white font-medium">{(run.summary.avg_score * 100).toFixed(0)}%</span>
-                  </span>
-                  <span className="text-indigo-300/70">
-                    Pass Rate: <span className="text-white font-medium">{(run.summary.pass_rate * 100).toFixed(0)}%</span>
-                  </span>
-                  <span className="text-indigo-300/70">
-                    Tests: <span className="text-white font-medium">{run.results.length}</span>
-                  </span>
-                  <span className="text-indigo-300/70 text-xs ml-auto">
-                    {new Date(run.timestamp).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+                <ChevronRight className="w-4 h-4 text-indigo-400/50 flex-shrink-0" />
+              </button>
             );
           })}
         </div>

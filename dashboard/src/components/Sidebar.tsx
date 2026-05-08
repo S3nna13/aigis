@@ -1,11 +1,23 @@
 import type { Page } from "../App";
-import { Shield, BarChart3, AlertTriangle, FileText, Grip } from "lucide-react";
+import {
+  Shield,
+  BarChart3,
+  AlertTriangle,
+  FileText,
+  Grip,
+  ScrollText,
+  Settings,
+  List,
+} from "lucide-react";
 
 const navItems: { page: Page; label: string; icon: typeof Shield }[] = [
   { page: "overview", label: "Overview", icon: BarChart3 },
   { page: "evals", label: "Evaluations", icon: FileText },
   { page: "guardrails", label: "Guardrails", icon: Shield },
+  { page: "guardlogs", label: "Guard Logs", icon: List },
   { page: "reports", label: "Reports", icon: AlertTriangle },
+  { page: "audit", label: "Audit", icon: ScrollText },
+  { page: "settings", label: "Settings", icon: Settings },
 ];
 
 interface SidebarProps {
@@ -46,7 +58,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       <div className="p-4 border-t border-indigo-900/50">
         <div className="flex items-center gap-2 text-xs text-indigo-400">
           <Grip className="w-3 h-3" />
-          v0.1.0
+          v0.2.3
         </div>
       </div>
     </aside>
