@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileText, Download, Trash2, RefreshCw } from "lucide-react";
+import { sanitize } from "../api";
 
 interface Report {
     id: string;
@@ -127,7 +128,7 @@ export default function Reports() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.25rem" }}>
                                     <FileText size={18} style={{ color: "#3b82f6" }} />
-                                    <span style={{ fontWeight: 600 }}>{report.name}</span>
+                                    <span style={{ fontWeight: 600 }}>{sanitize(report.name)}</span>
                                     <span
                                         style={{
                                             fontSize: "0.75rem",

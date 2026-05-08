@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, Download, CheckCircle, XCircle, HelpCircle } from "lucide-react";
 import type { EvalRun } from "../api";
+import { sanitize } from "../api";
 
 interface EvalsProps {
   evalRuns: EvalRun[];
@@ -55,7 +56,7 @@ export function Evals({ evalRuns }: EvalsProps) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <Icon className={`w-5 h-5 ${iconColor}`} />
-                    <h3 className="font-semibold text-white">{run.name}</h3>
+                    <h3 className="font-semibold text-white">{sanitize(run.name)}</h3>
                   </div>
                     <span className="text-xs text-indigo-400">{run.summary.total} tests</span>
                 </div>

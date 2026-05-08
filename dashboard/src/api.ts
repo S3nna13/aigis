@@ -111,3 +111,15 @@ export function loadLocalResults(): EvalRun[] {
 export function saveLocalResults(runs: EvalRun[]) {
   localStorage.setItem("aigis_results", JSON.stringify(runs));
 }
+
+const DANGEROUS_PATTERNS = /[<>\"'&]/;
+
+export function sanitize(text: string): string {
+  if (!text) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

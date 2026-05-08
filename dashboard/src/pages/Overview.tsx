@@ -2,6 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { FileText, Shield, AlertTriangle, TrendingUp, Zap, Coins } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { EvalRun } from "../api";
+import { sanitize } from "../api";
 
 interface ApiMetrics {
   requests: number;
@@ -38,7 +39,7 @@ export function Overview({ evalRuns }: OverviewProps) {
     : 0;
 
   const chartData = [...evalRuns].reverse().slice(-10).map((r) => ({
-    name: r.name.slice(0, 16),
+    name: sanitize(r.name).slice(0, 16),
     "Avg Score": +(r.summary.avg_score * 100).toFixed(0),
     "Pass Rate": +(r.summary.pass_rate * 100).toFixed(0),
   }));
