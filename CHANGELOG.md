@@ -5,6 +5,39 @@ All notable changes to AIGIS are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-05-08
+
+### Security
+
+- **Stored XSS in dashboard**: Added `sanitize()` utility to escape HTML entities in eval and report names before rendering in React components (`Evals.tsx`, `Reports.tsx`, `Overview.tsx`).
+- **Prompt injection in eval inputs**: Added `_sanitize_prompt()` to strip control characters and injection patterns before `{{input}}` substitution in streaming eval.
+
+### Added
+
+- **`SECURITY.md`**: Responsible disclosure policy, OWASP LLM Top 10 coverage table, production deployment best practices.
+- **`.github/CODEOWNERS`**: Route Python/dashboard/CLI to maintainers.
+- **`.github/dependabot.yml`**: Weekly pip, npm/dashboard, npm/cli dependency updates.
+
+### Changed
+
+- Pin `ruff==0.15.12` explicitly in CI and release workflows to prevent version drift.
+- Bump `ruff-pre-commit` to `v0.15.12` in `.pre-commit-config.yaml`.
+- Pin npm dependencies in dashboard and CLI to prevent Dependabot from proposing breaking major version bumps (e.g., `vite ~6.4.0`, `typescript ~5.4.0`).
+
+## [0.2.1] — 2026-05-08
+
+### Security
+
+- **Auth bypass**: `verify_api_key()` now returns `False` when `AIGIS_API_KEY` is empty (was returning `True`, allowing unauthenticated access).
+- **CORS misconfiguration**: Empty `AIGIS_CORS_ORIGINS` env var no longer produces `[""]` which browsers treat as wildcard. Now falls back to `localhost:5173` and `127.0.0.1:5173`.
+- **API information disclosure**: `/api/health` no longer returns `"authenticated": bool` field.
+- **CSP hardening**: Add `script-src 'self'`, `base-uri 'self'`, `form-action 'self'`. Remove deprecated `X-XSS-Protection` header.
+
+### Fixed
+
+- SDK `aguard()`: add missing `constitutional` rail routing.
+- Ruff formatting applied across all 18 files.
+
 ## [0.2.0] — 2025-05-07
 
 ### Added
