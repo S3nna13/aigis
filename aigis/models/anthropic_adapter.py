@@ -30,7 +30,9 @@ class AnthropicAdapter(ModelAdapter):
         if self._client is None:
             from anthropic import AsyncAnthropic
 
-            self._client = AsyncAnthropic(api_key=self._api_key, base_url=self._base_url, timeout=self._timeout)
+            self._client = AsyncAnthropic(
+                api_key=self._api_key, base_url=self._base_url, timeout=self._timeout
+            )
         return self._client
 
     @property

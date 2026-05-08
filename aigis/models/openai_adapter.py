@@ -30,7 +30,9 @@ class OpenAIAdapter(ModelAdapter):
         if self._client is None:
             from openai import AsyncOpenAI
 
-            self._client = AsyncOpenAI(api_key=self._api_key, base_url=self._base_url, timeout=self._timeout)
+            self._client = AsyncOpenAI(
+                api_key=self._api_key, base_url=self._base_url, timeout=self._timeout
+            )
         return self._client
 
     @property

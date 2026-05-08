@@ -38,6 +38,7 @@ DEFAULT_SAFETY_MARGIN = 2048
 def estimate_tokens(text: str, model: str = "gpt-4o") -> int:
     try:
         import tiktoken as _tiktoken
+
         enc = _tiktoken.encoding_for_model(_tiktoken_model_name(model))
         return len(enc.encode(text))
     except (KeyError, ImportError):
@@ -133,7 +134,9 @@ class TokenBudget:
     def __init__(self):
         self._budgets = {}
 
-    def check(self, user_id: str, prompt_tokens: int, completion_tokens: int, limit: int = 10_000_000) -> tuple[bool, str]:
+    def check(
+        self, user_id: str, prompt_tokens: int, completion_tokens: int, limit: int = 10_000_000
+    ) -> tuple[bool, str]:
         key = f"user:{user_id}"
         budget = self._budgets.setdefault(key, {"spent": 0, "limit": limit})
         total = prompt_tokens + completion_tokens

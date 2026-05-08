@@ -114,7 +114,9 @@ def log_eval_run(
 ) -> str:
     """Log an eval run summary."""
     return log_event(
-        event=AuditEvent.EVAL_RUN_COMPLETE if outcome == "completed" else AuditEvent.EVAL_RUN_FAILED,
+        event=AuditEvent.EVAL_RUN_COMPLETE
+        if outcome == "completed"
+        else AuditEvent.EVAL_RUN_FAILED,
         resource=f"eval/{eval_id}",
         outcome=outcome,
         metadata={

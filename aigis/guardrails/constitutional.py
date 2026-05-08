@@ -13,28 +13,91 @@ from aigis.guardrails.engine import Guardrail, GuardrailResult
 
 
 PRINCIPLES = [
-    ("Helpful and Harmless", [
-        "bomb", "explosive", "weapon", "gun", "knife", "kill", "murder", "rape",
-        "assault", "abuse", "terrorist", "trafficking", "harmful", "dangerous",
-        "hostage", "suicide", "overdose", "illegal", "unethical", "illicit",
-    ]),
-    ("Truthful", [
-        "hallucinated", "fabricated", "made up", "factually incorrect",
-        "misleading", "false claim", "lying", "lie about",
-    ]),
-    ("Respectful", [
-        "hate", "racist", "sexist", "discriminat", "slur", "offensive",
-        "harassment", "harass", "insult", "stupid", "idiot", "degrade",
-        "humiliate", "intimidat",
-    ]),
-    ("Privacy-Safe", [
-        "ssn", "social security", "credit card", "bank account", "password",
-        "private key", "personal info", "dox", "stalk",
-    ]),
-    ("No Deception", [
-        "deceptive", "fraud", "scam", "phishing", "manipulat", "trick",
-        "deceiv", "impersonat", "fake identity",
-    ]),
+    (
+        "Helpful and Harmless",
+        [
+            "bomb",
+            "explosive",
+            "weapon",
+            "gun",
+            "knife",
+            "kill",
+            "murder",
+            "rape",
+            "assault",
+            "abuse",
+            "terrorist",
+            "trafficking",
+            "harmful",
+            "dangerous",
+            "hostage",
+            "suicide",
+            "overdose",
+            "illegal",
+            "unethical",
+            "illicit",
+        ],
+    ),
+    (
+        "Truthful",
+        [
+            "hallucinated",
+            "fabricated",
+            "made up",
+            "factually incorrect",
+            "misleading",
+            "false claim",
+            "lying",
+            "lie about",
+        ],
+    ),
+    (
+        "Respectful",
+        [
+            "hate",
+            "racist",
+            "sexist",
+            "discriminat",
+            "slur",
+            "offensive",
+            "harassment",
+            "harass",
+            "insult",
+            "stupid",
+            "idiot",
+            "degrade",
+            "humiliate",
+            "intimidat",
+        ],
+    ),
+    (
+        "Privacy-Safe",
+        [
+            "ssn",
+            "social security",
+            "credit card",
+            "bank account",
+            "password",
+            "private key",
+            "personal info",
+            "dox",
+            "stalk",
+        ],
+    ),
+    (
+        "No Deception",
+        [
+            "deceptive",
+            "fraud",
+            "scam",
+            "phishing",
+            "manipulat",
+            "trick",
+            "deceiv",
+            "impersonat",
+            "fake identity",
+        ],
+    ),
 ]
 
 
@@ -91,7 +154,13 @@ class ConstitutionalCritique(Guardrail):
         violations: list[str] = []
         total_score = 0.0
 
-        severity_weights = {"Helpful and Harmless": 1.0, "No Deception": 0.8, "Privacy-Safe": 0.8, "Respectful": 0.5, "Truthful": 0.3}
+        severity_weights = {
+            "Helpful and Harmless": 1.0,
+            "No Deception": 0.8,
+            "Privacy-Safe": 0.8,
+            "Respectful": 0.5,
+            "Truthful": 0.3,
+        }
 
         for principle_name, keywords in self._principles:
             hits = [kw for kw in keywords if kw in text_lower]
@@ -103,7 +172,8 @@ class ConstitutionalCritique(Guardrail):
 
         passed = total_score < 0.25
         reason = (
-            "All principles satisfied" if not violations
+            "All principles satisfied"
+            if not violations
             else f"Principle violations: {'; '.join(violations)}"
         )
         return GuardrailResult(

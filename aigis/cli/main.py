@@ -50,23 +50,56 @@ def eval(config, output, fmt):
 @click.argument("text")
 @click.option("--config", "-c", default=None, help="Guardrail config file")
 @click.option("--all/--no-all", "use_all", default=False, help="Enable all 14 guardrails")
-@click.option("--jailbreak/--no-jailbreak", default=False, help="Jailbreak pattern detection (LLM01)")
+@click.option(
+    "--jailbreak/--no-jailbreak", default=False, help="Jailbreak pattern detection (LLM01)"
+)
 @click.option("--toxicity/--no-toxicity", default=False, help="Toxicity keyword detection (LLM02)")
-@click.option("--toxicity-filter/--no-toxicity-filter", default=False, help="Toxicity filter via Detoxify (LLM02)")
+@click.option(
+    "--toxicity-filter/--no-toxicity-filter",
+    default=False,
+    help="Toxicity filter via Detoxify (LLM02)",
+)
 @click.option("--pii/--no-pii", default=False, help="PII detection and redaction (LLM06)")
-@click.option("--injection/--no-injection", default=False, help="Prompt injection detection (LLM01)")
+@click.option(
+    "--injection/--no-injection", default=False, help="Prompt injection detection (LLM01)"
+)
 @click.option("--secrets/--no-secrets", default=False, help="Secret/API key scanning (LLM06)")
-@click.option("--context/--no-context", default=False, help="Context window length validation (LLM04)")
-@click.option("--rag-poisoning/--no-rag-poisoning", default=False, help="RAG context poisoning detection (LLM03)")
-@click.option("--structured-output/--no-structured-output", default=False, help="Structured output validation (LLM07)")
-@click.option("--constitutional/--no-constitutional", default=False, help="Constitutional AI critique (LLM02)")
+@click.option(
+    "--context/--no-context", default=False, help="Context window length validation (LLM04)"
+)
+@click.option(
+    "--rag-poisoning/--no-rag-poisoning",
+    default=False,
+    help="RAG context poisoning detection (LLM03)",
+)
+@click.option(
+    "--structured-output/--no-structured-output",
+    default=False,
+    help="Structured output validation (LLM07)",
+)
+@click.option(
+    "--constitutional/--no-constitutional", default=False, help="Constitutional AI critique (LLM02)"
+)
 @click.option("--factual/--no-factual", default=False, help="Factual consistency check (LLM05)")
-@click.option("--hallucination/--no-hallucination", default=False, help="Hallucination detection (LLM05)")
+@click.option(
+    "--hallucination/--no-hallucination", default=False, help="Hallucination detection (LLM05)"
+)
 def guard(
-    text, config, use_all,
-    jailbreak, toxicity, toxicity_filter, pii, injection, secrets,
-    context, rag_poisoning, structured_output, constitutional,
-    factual, hallucination,
+    text,
+    config,
+    use_all,
+    jailbreak,
+    toxicity,
+    toxicity_filter,
+    pii,
+    injection,
+    secrets,
+    context,
+    rag_poisoning,
+    structured_output,
+    constitutional,
+    factual,
+    hallucination,
 ):
     """Check text against one or more guardrails.
 
@@ -164,6 +197,7 @@ def guard(
 
     async def _resolve_model_if_needed():
         from aigis.core.schema import ModelConfig
+
         cfg = ModelConfig(provider="openai", model="gpt-4o-mini")
         return _resolve_model(cfg)
 

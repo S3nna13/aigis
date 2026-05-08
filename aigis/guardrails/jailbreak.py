@@ -37,9 +37,21 @@ class JailbreakDetector(Guardrail):
         matches = [p for p in self.JAILBREAK_PATTERNS if p.lower() in text_lower]
 
         jb_words = {
-            "ignore", "previous", "instructions", "bypass", "override",
-            "forget", "restrictions", "personality", "pretend", "roleplay",
-            "developer", "jailbreak", "jailbroken", "dan", "Restrictions",
+            "ignore",
+            "previous",
+            "instructions",
+            "bypass",
+            "override",
+            "forget",
+            "restrictions",
+            "personality",
+            "pretend",
+            "roleplay",
+            "developer",
+            "jailbreak",
+            "jailbroken",
+            "dan",
+            "Restrictions",
         }
         found_words = {w for w in jb_words if w in text_lower}
         score = min(1.0, len(matches) / 5.0)

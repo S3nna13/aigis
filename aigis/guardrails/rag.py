@@ -74,11 +74,7 @@ class RAGPoisoningDetector(Guardrail):
     def __init__(self, threshold: float = 0.3):
         self.threshold = threshold
         self._delimiter_re = re.compile(
-            "|".join(
-                LLAMAINDEX_DELIMITERS
-                + LANGCHAIN_DELIMITERS
-                + SUSPICIOUS_XML_PATTERNS
-            ),
+            "|".join(LLAMAINDEX_DELIMITERS + LANGCHAIN_DELIMITERS + SUSPICIOUS_XML_PATTERNS),
             re.IGNORECASE | re.MULTILINE,
         )
         self._injection_re = re.compile(
@@ -112,18 +108,14 @@ class RAGPoisoningDetector(Guardrail):
         if xml_hits:
             reasons.append(f"suspicious XML: {len(xml_hits)}")
 
-        severity = (
-            "critical"
-            if score >= 0.7
-            else "warning"
-            if reasons
-            else "info"
-        )
+        severity = "critical" if score >= 0.7 else "warning" if reasons else "info"
 
         return GuardrailResult(
             name=self.name,
             passed=passed,
             score=score,
-            reason="RAG context clean" if not reasons else f"Poisoning detected: {', '.join(reasons)}",
+            reason="RAG context clean"
+            if not reasons
+            else f"Poisoning detected: {', '.join(reasons)}",
             severity=severity,
         )

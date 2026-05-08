@@ -33,7 +33,13 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Idempotency-Key", "X-AIGIS-Signature"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-API-Key",
+        "X-Idempotency-Key",
+        "X-AIGIS-Signature",
+    ],
     expose_headers=["X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
@@ -50,7 +56,10 @@ class SecurityHeadersMiddleware:
                 (b"x-frame-options", b"DENY"),
                 (b"referrer-policy", b"strict-origin-when-cross-origin"),
                 (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
-                (b"content-security-policy", b"default-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
+                (
+                    b"content-security-policy",
+                    b"default-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+                ),
             ]
 
             async def send_with_headers(message):
@@ -93,7 +102,9 @@ async def rate_limit_middleware(request: Request, call_next):
 
         if len(window) >= RATE_LIMIT:
             return Response(
-                content=json.dumps({"detail": f"Rate limit exceeded: {RATE_LIMIT} req/{RATE_WINDOW}s"}),
+                content=json.dumps(
+                    {"detail": f"Rate limit exceeded: {RATE_LIMIT} req/{RATE_WINDOW}s"}
+                ),
                 status_code=429,
                 media_type="application/json",
             )
@@ -289,7 +300,8 @@ async def stream_eval(req: EvalRunRequest):
 
 
 INJECTION_PATTERNS = [
-    re.compile(r, re.IGNORECASE) for r in [
+    re.compile(r, re.IGNORECASE)
+    for r in [
         r"ignore\s+(all\s+)?previous",
         r"ignore\s+your\s+instructions",
         r"disregard\s+previous",
@@ -414,6 +426,7 @@ async def check_guardrails(req: GuardrailCheckRequest):
     # Audit log guard violation or pass
     try:
         from aigis.audit import log_guardrail_result
+
         log_guardrail_result(req.text, results, response.passed)
     except Exception:  # noqa: BLE001
         pass  # audit logging should never break API responses
@@ -421,13 +434,19 @@ async def check_guardrails(req: GuardrailCheckRequest):
     # Dispatch webhook
     event = "guardrail.passed" if response.passed else "guardrail.triggered"
     asyncio.create_task(
-        _dispatch_webhook(event, f"guard_{check_id}", {"check_id": check_id, "text": req.text, "results": response.model_dump()})
+        _dispatch_webhook(
+            event,
+            f"guard_{check_id}",
+            {"check_id": check_id, "text": req.text, "results": response.model_dump()},
+        )
     )
     return response
 
 
 @app.post("/api/webhooks")
-async def register_webhook(url: str, secret: str | None = None, retries: int = 3, timeout: float = 10.0):
+async def register_webhook(
+    url: str, secret: str | None = None, retries: int = 3, timeout: float = 10.0
+):
     from aigis.webhooks import WebhookConfig, get_webhook_manager
 
     manager = get_webhook_manager()
@@ -496,6 +515,7 @@ async def query_audit_logs(
     since_dt = None
     if since:
         from datetime import datetime
+
         since_dt = datetime.fromisoformat(since)
     return _query(event=evt, since=since_dt, limit=limit)
 
@@ -547,7 +567,8 @@ class APIMetrics:
         cutoff = datetime.now(timezone.utc).timestamp() - window_minutes * 60
         async with self._lock:
             recent = [
-                r for r in self._requests
+                r
+                for r in self._requests
                 if datetime.fromisoformat(r["timestamp"]).timestamp() > cutoff
             ]
         total = len(recent)

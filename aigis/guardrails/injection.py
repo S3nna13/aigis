@@ -91,18 +91,18 @@ DELIMITER_TRICK = [
     r'"""\s*system',
     r'"""\s*instruction',
     r'"""\s*admin',
-    r'```\s*system',
-    r'```\s*instruction',
-    r'<\|\s*system',
-    r'<\|\s*instruction',
-    r'<\|\s*user',
-    r'{{.*}}',
-    r'\{\{.*\}\}',
-    r'<<\s*',
-    r'>>\s*',
-    r'<<<',
-    r'>>>',
-    r'\[\[.*\]\]',
+    r"```\s*system",
+    r"```\s*instruction",
+    r"<\|\s*system",
+    r"<\|\s*instruction",
+    r"<\|\s*user",
+    r"{{.*}}",
+    r"\{\{.*\}\}",
+    r"<<\s*",
+    r">>\s*",
+    r"<<<",
+    r">>>",
+    r"\[\[.*\]\]",
 ]
 
 OVERRIDE_MARKERS = [
@@ -126,11 +126,27 @@ class PromptInjectionDetector(Guardrail):
     name = "prompt_injection"
 
     INJECTION_WORDS = {
-        "ignore", "previous", "instructions", "disregard", "bypass",
-        "override", "forget", "new instructions", "system instructions",
-        "ignore previous", "ignore all", "bypass your", "override your",
-        "no restrictions", "not bound", "free from", "new personality",
-        "act as", "roleplay as", "pretend", "you are now",
+        "ignore",
+        "previous",
+        "instructions",
+        "disregard",
+        "bypass",
+        "override",
+        "forget",
+        "new instructions",
+        "system instructions",
+        "ignore previous",
+        "ignore all",
+        "bypass your",
+        "override your",
+        "no restrictions",
+        "not bound",
+        "free from",
+        "new personality",
+        "act as",
+        "roleplay as",
+        "pretend",
+        "you are now",
     }
 
     def __init__(self, threshold: float = 0.3):
@@ -175,8 +191,10 @@ class PromptInjectionDetector(Guardrail):
             reasons.append(f"injection keywords: {len(injection_words_found)}")
 
         passed = score < self.threshold
-        reason = "No prompt injection detected" if not reasons else (
-            f"Potential injection detected — {', '.join(reasons)}"
+        reason = (
+            "No prompt injection detected"
+            if not reasons
+            else (f"Potential injection detected — {', '.join(reasons)}")
         )
         severity = "critical" if score >= 0.7 else "warning" if score >= self.threshold else "info"
 

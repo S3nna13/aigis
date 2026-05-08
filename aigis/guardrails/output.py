@@ -42,16 +42,22 @@ class StructuredOutputValidator(Guardrail):
             errors.append("No JSON object found in output")
             score = 0.9
             return GuardrailResult(
-                name=self.name, passed=False, score=score,
-                reason=f"Validation errors: {errors}", severity="critical",
+                name=self.name,
+                passed=False,
+                score=score,
+                reason=f"Validation errors: {errors}",
+                severity="critical",
             )
 
         try:
             data = json.loads(json_text)
         except json.JSONDecodeError as e:
             return GuardrailResult(
-                name=self.name, passed=False, score=1.0,
-                reason=f"Invalid JSON: {e}", severity="critical",
+                name=self.name,
+                passed=False,
+                score=1.0,
+                reason=f"Invalid JSON: {e}",
+                severity="critical",
             )
 
         if self.schema:

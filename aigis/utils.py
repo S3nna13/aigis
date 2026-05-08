@@ -98,7 +98,7 @@ async def with_retry(
         except exceptions as exc:
             last_exc = exc
             if attempt < retries:
-                sleep_time = backoff * (2 ** attempt)
+                sleep_time = backoff * (2**attempt)
                 await asyncio.sleep(sleep_time)
             else:
                 raise RetryExhaustedError(f"All {retries} retries failed") from last_exc

@@ -91,7 +91,7 @@ class WebhookManager:
                 except (httpx.HTTPStatusError, httpx.ConnectError, httpx.ConnectTimeout):
                     if attempt == hook.retries - 1:
                         raise
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
             raise RuntimeError("Webhook delivery failed after all retries")
 
 
@@ -102,7 +102,9 @@ def get_webhook_manager() -> WebhookManager:
     return _default_manager
 
 
-async def dispatch_webhook(event: WebhookEvent, source: str, data: dict[str, Any]) -> dict[str, Any]:
+async def dispatch_webhook(
+    event: WebhookEvent, source: str, data: dict[str, Any]
+) -> dict[str, Any]:
     from datetime import datetime, timezone
 
     payload = WebhookPayload(

@@ -69,7 +69,9 @@ _SHARED_SECRET_PATTERNS = (
     ),
     SecretPattern(
         name="generic_api_key",
-        pattern=re.compile(r"(?i)(api[_-]?key|apikey|secret[_-]?key|access[_-]?token)\s*[:=]\s*['\"]?[A-Za-z0-9_=-]{20,128}['\"]?"),
+        pattern=re.compile(
+            r"(?i)(api[_-]?key|apikey|secret[_-]?key|access[_-]?token)\s*[:=]\s*['\"]?[A-Za-z0-9_=-]{20,128}['\"]?"
+        ),
     ),
     SecretPattern(
         name="authorization_header",
@@ -77,7 +79,9 @@ _SHARED_SECRET_PATTERNS = (
     ),
     SecretPattern(
         name="base64_encoded_secret",
-        pattern=re.compile(r"(?i)(secret|password|token|credential)\s*[:=]\s*['\"]?[A-Za-z0-9+/=]{40,100}['\"]?"),
+        pattern=re.compile(
+            r"(?i)(secret|password|token|credential)\s*[:=]\s*['\"]?[A-Za-z0-9+/=]{40,100}['\"]?"
+        ),
     ),
     SecretPattern(
         name="connection_string",
@@ -105,7 +109,9 @@ def _shannon_entropy(text: str) -> float:
     return entropy
 
 
-def _find_high_entropy_strings(text: str, threshold: float = 4.5, min_length: int = 20) -> list[str]:
+def _find_high_entropy_strings(
+    text: str, threshold: float = 4.5, min_length: int = 20
+) -> list[str]:
     """Find long high-entropy strings that may be secrets."""
     results = []
     candidates = re.findall(r"[A-Za-z0-9+/=]{20,200}", text)
@@ -113,6 +119,7 @@ def _find_high_entropy_strings(text: str, threshold: float = 4.5, min_length: in
         if "=" in candidate and len(candidate) > 30:
             try:
                 import base64
+
                 base64.b64decode(candidate)
                 results.append(candidate)
                 continue
@@ -149,9 +156,13 @@ class SecretScanner(Guardrail):
             score = max(score, 0.8)
         passed = score < self.threshold
 
-        reason = "No secrets detected" if not found and not high_entropy else (
-            f"Detected secret types: {found}" +
-            (f"; high-entropy strings found: {len(high_entropy)}" if high_entropy else "")
+        reason = (
+            "No secrets detected"
+            if not found and not high_entropy
+            else (
+                f"Detected secret types: {found}"
+                + (f"; high-entropy strings found: {len(high_entropy)}" if high_entropy else "")
+            )
         )
         severity = "critical" if found else "warning" if high_entropy else "info"
 

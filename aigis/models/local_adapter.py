@@ -53,7 +53,10 @@ class LocalAdapter(ModelAdapter):
         return ModelResponse(
             content=choice["message"]["content"],
             usage=(
-                {"prompt": usage_data["prompt_tokens"], "completion": usage_data["completion_tokens"]}
+                {
+                    "prompt": usage_data["prompt_tokens"],
+                    "completion": usage_data["completion_tokens"],
+                }
                 if usage_data
                 else None
             ),

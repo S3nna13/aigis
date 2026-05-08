@@ -62,6 +62,7 @@ class ToxicityFilter(Guardrail):
             return self._model
         try:
             from detoxify import Detoxify
+
             self._model = Detoxify("unbiased")
             return self._model
         except ImportError:
@@ -91,9 +92,7 @@ class ToxicityFilter(Guardrail):
             matches = [kw for kw in _TOXICITY_KEYWORD_PATTERNS if kw in text_lower]
             score = min(1.0, len(matches) / 3.0)
             passed = score < self.threshold
-            reason = (
-                f"Keyword match: {matches}" if matches else "No toxic content detected"
-            )
+            reason = f"Keyword match: {matches}" if matches else "No toxic content detected"
             severity = "critical" if score > 0.7 else "warning" if matches else "info"
 
         return GuardrailResult(
