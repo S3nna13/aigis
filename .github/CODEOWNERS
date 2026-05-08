@@ -1,0 +1,19 @@
+# CODEOWNERS
+
+# Default owners for everything
+*       @S3nna13
+
+# Python core
+/aigis/  @S3nna13
+
+# CI/CD
+.github/ @S3nna13
+
+# Dashboard
+/dashboard/ @S3nna13
+
+# TypeScript CLI
+/cli/ @S3nna13
+
+# Examples
+/examples/ @S3nna13
