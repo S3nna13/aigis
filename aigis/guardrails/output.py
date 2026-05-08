@@ -30,9 +30,11 @@ class StructuredOutputValidator(Guardrail):
         self,
         schema: dict[str, Any] | None = None,
         json_strict: bool = False,
+        threshold: float = 0.3,
     ):
         self.schema = schema or {}
         self.json_strict = json_strict
+        self.threshold = threshold
 
     async def check(self, text: str, context: str | None = None) -> GuardrailResult:
         errors: list[str] = []
@@ -66,13 +68,13 @@ class StructuredOutputValidator(Guardrail):
         else:
             score = 0.0
 
-        passed = score < 0.3
+        passed = score < self.threshold
         return GuardrailResult(
             name=self.name,
             passed=passed,
             score=score,
             reason="Output valid" if not errors else f"Validation errors: {errors}",
-            severity="critical" if score > 0.7 else "warning" if errors else "info",
+            severity="critical" if score >= self.threshold else "warning" if errors else "info",
         )
 
     def _extract_json(self, text: str) -> str | None:

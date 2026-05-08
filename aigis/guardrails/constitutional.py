@@ -140,7 +140,7 @@ class ConstitutionalCritique(Guardrail):
         except (ValueError, IndexError):
             score = 0.5
 
-        passed = score >= self.threshold
+        passed = score < self.threshold
         return GuardrailResult(
             name=self.name,
             passed=passed,
@@ -170,7 +170,7 @@ class ConstitutionalCritique(Guardrail):
                 total_score = max(total_score, violation_score)
                 violations.append(f"{principle_name}: {hits}")
 
-        passed = total_score < 0.25
+        passed = total_score < self.threshold
         reason = (
             "All principles satisfied"
             if not violations

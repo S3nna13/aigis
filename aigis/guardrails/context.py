@@ -68,11 +68,13 @@ class ContextWindowGuard(Guardrail):
         model: str = "gpt-4o",
         safety_margin: int | None = None,
         max_tokens: int | None = None,
+        threshold: float = 0.3,
     ):
         self.model = model
         self.max_context = MODEL_CONTEXTS.get(model, 128000)
         self.safety_margin = safety_margin if safety_margin is not None else DEFAULT_SAFETY_MARGIN
         self.max_tokens = max_tokens or (self.max_context - self.safety_margin)
+        self.threshold = threshold
 
     async def check(self, text: str, context: str | None = None) -> GuardrailResult:
         total_text = text + ("\n" + context if context else "")
@@ -84,7 +86,7 @@ class ContextWindowGuard(Guardrail):
             length_score = min(1.0, (tokens - self.max_tokens) / self.max_tokens)
 
         score = max(padding_score, length_score)
-        passed = score < 0.3
+        passed = score < self.threshold
 
         reasons = []
         if padding_score > 0.1:

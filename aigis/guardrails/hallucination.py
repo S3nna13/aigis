@@ -14,7 +14,7 @@ class HallucinationDetector(Guardrail):
             return GuardrailResult(
                 name=self.name,
                 passed=True,
-                score=1.0,
+                score=0.0,
                 reason="No context provided for fact-checking",
             )
         prompt = f"""Context: {context}
@@ -29,11 +29,16 @@ Is the statement factually supported by the context? Answer only: YES or NO, the
 
         scores = re.findall(r"0\.\d+|1\.0", output)
         confidence = float(scores[0]) if scores else 0.5
-        score = confidence if is_supported else 1.0 - confidence
+        violation_score = 1.0 - confidence if is_supported else confidence
+        passed = violation_score < self.threshold
         return GuardrailResult(
             name=self.name,
-            passed=score >= self.threshold,
-            score=score,
+            passed=passed,
+            score=violation_score,
             reason=f"Statement is {'supported' if is_supported else 'not supported'} by context (confidence={confidence:.2f})",
-            severity="critical" if score < 0.3 else "warning" if score < self.threshold else "info",
+            severity="critical"
+            if violation_score > 0.7
+            else "warning"
+            if violation_score >= self.threshold
+            else "info",
         )
