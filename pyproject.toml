@@ -47,10 +47,10 @@ dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.3", "mypy>=1.8", "httpx"]
 aigis = "aigis.cli.main:cli"
 
 [project.urls]
-Homepage = "https://github.com/S3nna13/aigis"
-Documentation = "https://github.com/S3nna13/aigis#readme"
-Repository = "https://github.com/S3nna13/aigis"
-Issues = "https://github.com/S3nna13/aigis/issues"
+Homepage = "https://github.com/Aurelien033/aigis"
+Documentation = "https://github.com/Aurelien033/aigis#readme"
+Repository = "https://github.com/Aurelien033/aigis"
+Issues = "https://github.com/Aurelien033/aigis/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aigis"]

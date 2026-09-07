@@ -15,7 +15,7 @@ If you discover a security vulnerability within AIGIS, please report it responsi
 
 Instead, please report them via one of the following:
 
-1. **Email**: Send details to the maintainers via the [repository's security advisories](https://github.com/S3nna13/aigis/security/advisories/new).
+1. **Email**: Send details to the maintainers via the [repository's security advisories](https://github.com/Aurelien033/aigis/security/advisories/new).
 2. **GitHub Private Vulnerability Reporting**: Use the "Security" tab → "Advisories" → "New draft security advisory".
 
 When reporting, please include:
